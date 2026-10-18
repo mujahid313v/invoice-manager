@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  passwordHash      String
+  nextInvoiceNumber Int      @default(1)
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
+
+  businessProfile BusinessProfile?
+  clients         Client[]
+  invoices        Invoice[]
+}
+
+model BusinessProfile {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  businessName        String
+  address             String?
+  logoUrl             String?
+  currency            String   @default("USD") @db.Char(3)
+  defaultTaxPercent   Decimal  @default(0) @db.Decimal(5, 2)
+  paymentInstructions String?
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@index([userId, name])
+}
+
+model Invoice {
+  id       String        @id @default(cuid())
+  userId   String
+  clientId String
+  number   String
+  status   InvoiceStatus @default(DRAFT)
+
+  issueDate DateTime  @db.Date
+  dueDate   DateTime  @db.Date
+  paidAt    DateTime? @db.Timestamptz(3)
+
+  taxPercent    Decimal @db.Decimal(5, 2)
+  discountCents Int     @default(0)
+  subtotalCents Int
+  taxCents      Int
+  totalCents    Int
+
+  notes     String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  items  InvoiceItem[]
+
+  @@unique([userId, number])
+  @@index([clientId])
+  @@index([userId, status])
+  @@index([userId, issueDate])
+  @@index([userId, dueDate])
+}
+
+model InvoiceItem {
+  id             String @id @default(cuid())
+  invoiceId      String
+  position       Int
+  description    String
+  quantity       Int
+  unitPriceCents Int
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([invoiceId, position])
+}
