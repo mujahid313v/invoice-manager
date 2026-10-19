@@ -28,6 +28,12 @@ export default async function ClientsPage() {
         <div className="flex flex-wrap items-start gap-3 sm:justify-end">
           <Link
             className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+            href="/invoices"
+          >
+            Invoices
+          </Link>
+          <Link
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
             href="/dashboard"
           >
             Dashboard
