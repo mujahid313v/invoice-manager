@@ -22,7 +22,7 @@ export const credentialsSchema = z.object({
 
 export type Credentials = z.infer<typeof credentialsSchema>;
 
-const optionalProfileText = (max: number, message: string) =>
+const optionalText = (max: number, message: string) =>
   z
     .string()
     .trim()
@@ -33,17 +33,29 @@ const optionalProfileText = (max: number, message: string) =>
       value === undefined || value === null || value === "" ? null : value
     );
 
+const optionalEmail = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(254, "Email must be at most 254 characters.")
+  .nullable()
+  .optional()
+  .transform((value) =>
+    value === undefined || value === null || value === "" ? null : value
+  )
+  .refine(
+    (value) => value === null || z.email().safeParse(value).success,
+    "Enter a valid email address."
+  );
+
 export const businessProfileSchema = z.strictObject({
   businessName: z
     .string()
     .trim()
     .min(1, "Business name is required.")
     .max(200, "Business name must be at most 200 characters."),
-  address: optionalProfileText(500, "Address must be at most 500 characters."),
-  logoUrl: optionalProfileText(
-    2048,
-    "Logo URL must be at most 2048 characters."
-  ),
+  address: optionalText(500, "Address must be at most 500 characters."),
+  logoUrl: optionalText(2048, "Logo URL must be at most 2048 characters."),
   currency: z
     .string()
     .trim()
@@ -61,10 +73,24 @@ export const businessProfileSchema = z.strictObject({
       (value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-9,
       "Default tax must have at most 2 decimal places."
     ),
-  paymentInstructions: optionalProfileText(
+  paymentInstructions: optionalText(
     2000,
     "Payment instructions must be at most 2000 characters."
   ),
 });
 
 export type BusinessProfileInput = z.infer<typeof businessProfileSchema>;
+
+export const clientSchema = z.strictObject({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Client name is required.")
+    .max(200, "Client name must be at most 200 characters."),
+  email: optionalEmail,
+  phone: optionalText(50, "Phone must be at most 50 characters."),
+  address: optionalText(500, "Address must be at most 500 characters."),
+  notes: optionalText(2000, "Notes must be at most 2000 characters."),
+});
+
+export type ClientInput = z.infer<typeof clientSchema>;
