@@ -12,7 +12,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/schema.test.mjs tests/auth.test.mjs tests/business-profile.test.mjs",
+    "test": "node --test tests/schema.test.mjs tests/auth.test.mjs tests/business-profile.test.mjs tests/clients.test.mjs",
     "db:validate": "prisma validate",
     "db:format": "prisma format",
     "db:generate": "prisma generate",
