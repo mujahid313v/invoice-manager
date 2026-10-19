@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LogoutButton } from "@/components/logout-button";
 import { requirePageUser } from "@/lib/auth";
 
@@ -21,7 +22,15 @@ export default async function DashboardPage() {
             <span className="font-medium text-slate-900">{user.email}</span>
           </p>
         </div>
-        <LogoutButton />
+        <div className="flex flex-wrap items-start gap-3 sm:justify-end">
+          <Link
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+            href="/settings"
+          >
+            Settings
+          </Link>
+          <LogoutButton />
+        </div>
       </header>
 
       <section className="mt-10 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
