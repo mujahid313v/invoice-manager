@@ -162,3 +162,81 @@ export const invoiceCreateSchema = z.strictObject({
 });
 
 export type InvoiceCreateInput = z.infer<typeof invoiceCreateSchema>;
+
+const positiveIntParam = (label: string, max: number) =>
+  z
+    .string()
+    .regex(/^\d+$/, `${label} must be a positive integer.`)
+    .refine(
+      (value) => Number(value) >= 1,
+      `${label} must be a positive integer.`
+    )
+    .refine(
+      (value) => Number(value) <= max,
+      `${label} must be at most ${max}.`
+    )
+    .transform((value) => Number(value));
+
+export const invoiceListQuerySchema = z.strictObject({
+  search: z
+    .string()
+    .trim()
+    .max(200, "Search must be at most 200 characters.")
+    .optional(),
+  status: z
+    .enum(["DRAFT", "SENT", "PAID", "OVERDUE"], {
+      error: "status must be DRAFT, SENT, PAID or OVERDUE.",
+    })
+    .optional(),
+  sort: z.enum(["date", "amount"], {
+    error: "sort must be date or amount.",
+  }),
+  order: z.enum(["asc", "desc"], {
+    error: "order must be asc or desc.",
+  }),
+  page: positiveIntParam("page", 100_000),
+  pageSize: positiveIntParam("pageSize", 50),
+});
+
+export type InvoiceListQuery = {
+  search?: string;
+  status?: "DRAFT" | "SENT" | "PAID" | "OVERDUE";
+  sort: "date" | "amount";
+  order: "asc" | "desc";
+  page: number;
+  pageSize: number;
+};
+
+export function parseInvoiceListQuery(
+  params: Record<string, string | undefined>
+):
+  | { success: true; data: InvoiceListQuery }
+  | { success: false; error: z.ZodError } {
+  const compact: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) {
+      compact[key] = value;
+    }
+  }
+
+  const parsed = invoiceListQuerySchema.safeParse({
+    sort: "date",
+    order: "desc",
+    page: "1",
+    pageSize: "10",
+    ...compact,
+  });
+
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  return {
+    success: true,
+    data: {
+      ...parsed.data,
+      search: parsed.data.search || undefined,
+    },
+  };
+}

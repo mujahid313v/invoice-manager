@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { effectiveInvoiceStatus } from "@/lib/invoice-list";
 import {
   computeInvoiceTotals,
   formatDateOnly,
@@ -79,12 +80,13 @@ export function serializeInvoice(
 }
 
 export function serializeInvoiceListItem(
-  invoice: InvoiceRecord & { client: { name: string } }
+  invoice: InvoiceRecord & { client: { name: string } },
+  now: Date = new Date()
 ) {
   return {
     id: invoice.id,
     number: invoice.number,
-    status: invoice.status,
+    status: effectiveInvoiceStatus(invoice, now),
     issueDate: formatDateOnly(invoice.issueDate),
     dueDate: formatDateOnly(invoice.dueDate),
     taxPercent: invoice.taxPercent.toNumber(),

@@ -535,16 +535,19 @@ test(
     );
 
     await t.test(
-      "list is owner-scoped, newest first and shows client names",
+      "list is owner-scoped, paginated and shows client names",
       async () => {
         const listA = await api("/api/invoices", { cookie: cookieA });
         const listB = await api("/api/invoices", { cookie: cookieB });
 
         assert.equal(listA.status, 200);
-        assert.equal(Array.isArray(listA.body), true);
-        assert.ok(listA.body.length >= 3);
+        assert.equal(Array.isArray(listA.body.invoices), true);
+        assert.equal(typeof listA.body.total, "number");
+        assert.equal(listA.body.page, 1);
+        assert.equal(listA.body.pageSize, 10);
+        assert.ok(listA.body.total >= 3);
 
-        for (const invoice of listA.body) {
+        for (const invoice of listA.body.invoices) {
           assert.equal(
             invoice.clientName,
             "Alpha",
@@ -553,25 +556,94 @@ test(
           assertIntegerCents(invoice.totalCents, "totalCents");
         }
 
-        const dates = listA.body.map((invoice) =>
-          new Date(invoice.createdAt).getTime()
-        );
+        const dates = listA.body.invoices.map((invoice) => invoice.issueDate);
         assert.deepEqual(
           dates,
-          [...dates].sort((left, right) => right - left),
-          "list must be newest first"
+          [...dates].sort((left, right) => (left < right ? 1 : -1)),
+          "default order is issue date descending"
         );
 
         assert.equal(listB.status, 200);
-        assert.ok(listB.body.length >= 2);
-        for (const invoice of listB.body) {
+        assert.ok(listB.body.total >= 2);
+        for (const invoice of listB.body.invoices) {
           assert.equal(invoice.clientName, "Bravo");
         }
 
         const statuses = new Set(
-          listA.body.map((invoice) => invoice.status)
+          listA.body.invoices.map((invoice) => invoice.status)
         );
         assert.deepEqual([...statuses], ["DRAFT"]);
+      }
+    );
+
+    await t.test(
+      "search, filter, sort and pagination query parameters",
+      async () => {
+        // Overdue rows need a SENT invoice, which arrives in Phase 6 status
+        // actions; exercise shape, scoping and validation with stored ones.
+        const byNumber = await api(
+          `/api/invoices?search=${encodeURIComponent("INV-0001")}`,
+          { cookie: cookieA }
+        );
+        assert.equal(byNumber.status, 200);
+        assert.ok(byNumber.body.total >= 1);
+        for (const invoice of byNumber.body.invoices) {
+            assert.match(invoice.number, /INV-0001/i);
+        }
+
+        const byClient = await api(
+          `/api/invoices?search=${encodeURIComponent("alpha")}`,
+          { cookie: cookieB }
+        );
+        assert.equal(byClient.status, 200);
+        assert.equal(
+          byClient.body.total,
+          0,
+          "owner B must not see owner A's Alpha invoices via search"
+        );
+
+        const amountAsc = await api(
+          "/api/invoices?sort=amount&order=asc&pageSize=2",
+          { cookie: cookieA }
+        );
+        assert.equal(amountAsc.status, 200);
+        assert.equal(amountAsc.body.invoices.length, 2);
+        const amounts = amountAsc.body.invoices.map(
+          (invoice) => invoice.totalCents
+        );
+        assert.deepEqual(
+          amounts,
+          [...amounts].sort((left, right) => left - right)
+        );
+
+        const page2 = await api("/api/invoices?page=2", { cookie: cookieA });
+        assert.equal(page2.status, 200);
+        assert.equal(page2.body.page, 2);
+
+        const pastTheEnd = await api("/api/invoices?page=99999", {
+          cookie: cookieA,
+        });
+        assert.equal(pastTheEnd.status, 200);
+        assert.deepEqual(pastTheEnd.body.invoices, []);
+
+        for (const bad of [
+          "status=NOPE",
+          "page=0",
+          "page=-1",
+          "page=1.5",
+          "pageSize=51",
+          "sort=dueDate",
+          "order=descending",
+          "bogus=1",
+        ]) {
+          const invalid = await api(`/api/invoices?${bad}`, {
+            cookie: cookieA,
+          });
+
+          assert.equal(invalid.status, 400, bad);
+          assert.equal(typeof invalid.body.error, "string");
+          assert.ok(invalid.body.error.length > 0, bad);
+        }
       }
     );
   }

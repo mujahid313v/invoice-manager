@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-response";
 import { requireUser } from "@/lib/auth";
 import {
+  buildInvoiceListOrderBy,
+  buildInvoiceListWhere,
+} from "@/lib/invoice-list";
+import {
   createInvoiceForUser,
   InvoiceInputError,
   isInvoiceNumberConflict,
@@ -10,25 +14,64 @@ import {
 } from "@/lib/invoices";
 import { InvoiceCalculationError } from "@/lib/money";
 import { getPrisma } from "@/lib/prisma";
-import { invoiceCreateSchema } from "@/lib/validation";
+import { invoiceCreateSchema, parseInvoiceListQuery } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+// Defaults (documented): sort=date (issueDate), order=desc (newest first),
+// page=1, pageSize=10 (max 50). The `status` field in each row is the
+// computed effective status; OVERDUE is never stored.
+export async function GET(request: Request) {
   const user = await requireUser();
 
   if (user instanceof NextResponse) {
     return user;
   }
 
-  try {
-    const invoices = await getPrisma().invoice.findMany({
-      where: { userId: user.id },
-      orderBy: { createdAt: "desc" },
-      include: { client: { select: { name: true } } },
-    });
+  const searchParams = new URL(request.url).searchParams;
+  const params: Record<string, string | undefined> = {};
 
-    return NextResponse.json(invoices.map(serializeInvoiceListItem));
+  for (const key of new Set(searchParams.keys())) {
+    params[key] = searchParams.get(key) ?? undefined;
+  }
+
+  const parsed = parseInvoiceListQuery(params);
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        error: "Invalid query parameters.",
+        issues: parsed.error.issues.map((issue) => ({
+          path: issue.path.map(String).join("."),
+          message: issue.message,
+        })),
+      },
+      { status: 400 }
+    );
+  }
+
+  const { data } = parsed;
+  const now = new Date();
+
+  try {
+    const where = buildInvoiceListWhere(user.id, data, now);
+    const [invoices, total] = await Promise.all([
+      getPrisma().invoice.findMany({
+        where,
+        orderBy: buildInvoiceListOrderBy(data),
+        skip: (data.page - 1) * data.pageSize,
+        take: data.pageSize,
+        include: { client: { select: { name: true } } },
+      }),
+      getPrisma().invoice.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      invoices: invoices.map((invoice) => serializeInvoiceListItem(invoice, now)),
+      total,
+      page: data.page,
+      pageSize: data.pageSize,
+    });
   } catch (error) {
     console.error(
       "Invoice list failed:",
