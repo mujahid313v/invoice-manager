@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { computeInvoiceTotals, formatMoney, parseCentsInput } from "@/lib/money";
-import { invoiceCreateSchema } from "@/lib/validation";
+import { computeInvoiceTotals, formatCentsInput, formatMoney, parseCentsInput } from "@/lib/money";
+import { invoiceCreateSchema, invoiceUpdateSchema } from "@/lib/invoice-schema";
 
 type ClientOption = {
   id: string;
@@ -33,6 +33,23 @@ type ItemRow = {
   unitPrice: string;
 };
 
+export type InvoiceFormInitialValues = {
+  clientId: string;
+  issueDate: string;
+  dueDate: string;
+  taxPercent: string;
+  discountCents: number;
+  items: Array<{
+    description: string;
+    quantity: number;
+    unitPriceCents: number;
+  }>;
+};
+
+type InvoiceFormProps =
+  | { mode: "create" }
+  | { mode: "edit"; invoiceId: string; initialValues: InvoiceFormInitialValues };
+
 const inputClassName =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 disabled:bg-slate-50 disabled:text-slate-500";
 
@@ -50,6 +67,17 @@ function newItemRow(key: number): ItemRow {
   return { key, description: "", quantity: "1", unitPrice: "" };
 }
 
+function toInitialItemRows(
+  items: InvoiceFormInitialValues["items"]
+): ItemRow[] {
+  return items.map((item, index) => ({
+    key: index,
+    description: item.description,
+    quantity: String(item.quantity),
+    unitPrice: formatCentsInput(item.unitPriceCents),
+  }));
+}
+
 function toFieldErrorMessage(
   issues: InvoiceIssue[] | undefined,
   match: (path: string) => boolean
@@ -57,8 +85,13 @@ function toFieldErrorMessage(
   return issues?.find((issue) => match(issue.path))?.message;
 }
 
-export function InvoiceForm() {
+export function InvoiceForm(props: InvoiceFormProps) {
   const router = useRouter();
+  const isEdit = props.mode === "edit";
+  const invoiceId = props.mode === "edit" ? props.invoiceId : null;
+  const initialValues =
+    props.mode === "edit" ? props.initialValues : undefined;
+  const schema = isEdit ? invoiceUpdateSchema : invoiceCreateSchema;
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [currency, setCurrency] = useState("USD");
   const [profileTaxPercent, setProfileTaxPercent] = useState<number | null>(
@@ -68,19 +101,29 @@ export function InvoiceForm() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
-  const [clientId, setClientId] = useState("");
-  const [issueDate, setIssueDate] = useState(() =>
-    toDateInputValue(new Date())
+  const [clientId, setClientId] = useState(initialValues?.clientId ?? "");
+  const [issueDate, setIssueDate] = useState(
+    initialValues?.issueDate ?? toDateInputValue(new Date())
   );
   const [dueDate, setDueDate] = useState(() => {
+    if (initialValues) {
+      return initialValues.dueDate;
+    }
+
     const due = new Date();
     due.setUTCDate(due.getUTCDate() + 14);
     return toDateInputValue(due);
   });
-  const [taxPercentInput, setTaxPercentInput] = useState("");
-  const [discountInput, setDiscountInput] = useState("");
-  const [items, setItems] = useState<ItemRow[]>([newItemRow(0)]);
-  const nextRowKey = useRef(1);
+  const [taxPercentInput, setTaxPercentInput] = useState(
+    initialValues?.taxPercent ?? ""
+  );
+  const [discountInput, setDiscountInput] = useState(
+    initialValues ? formatCentsInput(initialValues.discountCents) : ""
+  );
+  const [items, setItems] = useState<ItemRow[]>(() =>
+    initialValues ? toInitialItemRows(initialValues.items) : [newItemRow(0)]
+  );
+  const nextRowKey = useRef(initialValues?.items.length ?? 1);
 
   const [fieldErrors, setFieldErrors] = useState<
     Record<string, string | undefined>
@@ -238,7 +281,7 @@ export function InvoiceForm() {
     event.preventDefault();
     setServerError(null);
 
-    const parsed = invoiceCreateSchema.safeParse(buildPayload());
+    const parsed = schema.safeParse(buildPayload());
 
     if (!parsed.success) {
       const issues = parsed.error.issues.map((issue) => ({
@@ -290,11 +333,14 @@ export function InvoiceForm() {
     setSaving(true);
 
     try {
-      const response = await fetch("/api/invoices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(parsed.data),
-      });
+      const response = await fetch(
+        isEdit && invoiceId ? `/api/invoices/${invoiceId}` : "/api/invoices",
+        {
+          method: isEdit ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(parsed.data),
+        }
+      );
 
       if (response.status === 401) {
         router.replace("/login");
@@ -313,12 +359,14 @@ export function InvoiceForm() {
             .filter(Boolean)
             .join(" ") ||
             data?.error ||
-            "Unable to create invoice."
+            (isEdit
+              ? "Unable to save the invoice."
+              : "Unable to create invoice.")
         );
         return;
       }
 
-      router.push("/invoices");
+      router.push(isEdit && invoiceId ? `/invoices/${invoiceId}` : "/invoices");
       router.refresh();
     } catch {
       setServerError("Network error. Check your connection and try again.");
@@ -406,8 +454,9 @@ export function InvoiceForm() {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
       <p className="text-sm text-slate-600">
-        Pick a client, add line items and we&apos;ll calculate the totals when
-        the invoice is saved.
+        {isEdit
+          ? "Update the invoice details. Only draft invoices can be edited."
+          : "Pick a client, add line items and we'll calculate the totals when the invoice is saved."}
       </p>
 
       <form className="mt-6" onSubmit={handleSubmit} noValidate>
@@ -732,7 +781,7 @@ export function InvoiceForm() {
         <div className="mt-8 flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
           <Link
             className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-            href="/invoices"
+            href={isEdit && invoiceId ? `/invoices/${invoiceId}` : "/invoices"}
           >
             Cancel
           </Link>
@@ -741,7 +790,13 @@ export function InvoiceForm() {
             type="submit"
             disabled={saving}
           >
-            {saving ? "Creating..." : "Create invoice"}
+            {saving
+              ? isEdit
+                ? "Saving..."
+                : "Creating..."
+              : isEdit
+                ? "Save changes"
+                : "Create invoice"}
           </button>
         </div>
       </form>
