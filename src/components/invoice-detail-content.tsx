@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { InvoiceActions } from "@/components/invoice-actions";
+import { InvoicePdfDownloadButton } from "@/components/invoice-pdf-download-button";
 import { InvoiceStatusBadge } from "@/components/invoice-status-badge";
 import { requirePageUser } from "@/lib/auth";
 import { effectiveInvoiceStatus } from "@/lib/invoice-status";
@@ -245,6 +246,11 @@ export async function InvoiceDetailContent({
           </p>
         </div>
       ) : null}
+
+      <InvoicePdfDownloadButton
+        invoiceId={invoice.id}
+        invoiceNumber={invoice.number}
+      />
 
       <InvoiceActions invoiceId={invoice.id} status={invoice.status} />
     </section>
