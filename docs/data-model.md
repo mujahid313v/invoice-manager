@@ -14,7 +14,7 @@ additions that later issues require:
 | Addition | Required by |
 | --- | --- |
 | `User.nextInvoiceNumber` | Issue #4: per-user `INV-0001` numbering inside a transaction, with the `(userId, number)` unique constraint as the backstop. |
-| `Invoice.paidAt` | Issue #6: schema change adding `paidAt` for the Phase 8 revenue chart. |
+| `Invoice.paidAt` | Part of the initial schema (Issue #1); written by the Issue #6 status transitions and consumed by the Issue #8 dashboard revenue chart. |
 | `InvoiceItem.position` + `@@unique([invoiceId, position])` | Deterministic line-item order for the Issue #6 detail page and the Issue #7 PDF table. |
 
 Earlier draft extensions were removed after review because no issue required

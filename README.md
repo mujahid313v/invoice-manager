@@ -4,9 +4,9 @@ A small SaaS web app where freelancers and small businesses register, manage the
 
 ## Live Demo
 
-_Coming soon — deployed on Vercel._
+**Live demo: `<ADD URL AFTER DEPLOY>`** (deployed on Vercel with a Neon database)
 
-**Demo account** (created by the seed script):
+**Demo account** (created by the seed script — `npm run db:seed`):
 
 | Field    | Value            |
 | -------- | ---------------- |
@@ -15,7 +15,20 @@ _Coming soon — deployed on Vercel._
 
 ## Screenshots
 
-_Coming soon._
+> Add the captured images under `docs/screenshots/` after the deploy, then
+> uncomment the lines below. Placeholders — do not invent images.
+
+<!-- ![Dashboard](docs/screenshots/dashboard.png) -->
+<!-- ![Invoice list](docs/screenshots/invoices.png) -->
+<!-- ![Invoice detail](docs/screenshots/invoice-detail.png) -->
+<!-- ![Invoice PDF](docs/screenshots/pdf.png) -->
+
+| File to capture                  | Suggested page                |
+| -------------------------------- | ----------------------------- |
+| `docs/screenshots/dashboard.png` | `/dashboard` with demo data   |
+| `docs/screenshots/invoices.png`  | `/invoices` list              |
+| `docs/screenshots/invoice-detail.png` | `/invoices/[id]` detail  |
+| `docs/screenshots/pdf.png`       | Downloaded `INV-0001.pdf`     |
 
 ## Problem It Solves
 
@@ -40,6 +53,11 @@ Freelancers, small agencies, shop owners and consultants. Each registered user i
 - Money is stored as **integer cents**, never floats.
 
 ## Features (MVP)
+
+Implemented (Phases 1–8): authentication, business profile, client CRUD, the
+invoice builder with server-computed totals, statuses, the invoice list, the
+invoice detail page with status workflow, PDF download and the dashboard.
+The seed script (Phase 9) provides the demo data.
 
 1. **Authentication** — register, login, logout with server-side sessions (signed httpOnly cookie, jose JWT).
 2. **Business profile** — business name, address, logo URL, currency, default tax percentage, payment instructions text.
@@ -213,8 +231,11 @@ All routes (except register/login) require a valid session and return **401** ot
 
 ### Prerequisites
 
-- Node.js 20+
-- A Neon (or any PostgreSQL) database
+- **Node.js 20.9+** for the app (`engines` is enforced; the repo is developed
+  on Node 24). The seed script uses Node's native TypeScript execution, so
+  running `npm run db:seed` needs **Node 23.6+** (or 22.6+ with
+  `--experimental-strip-types`).
+- A **Neon** (or any PostgreSQL) database.
 
 ### Setup
 
@@ -230,7 +251,7 @@ npm install
 cp .env.example .env
 # Fill in DATABASE_URL and AUTH_SECRET in .env
 
-# 4. Run migrations
+# 4. Run migrations (local development)
 npx prisma migrate dev
 
 # 5. Seed the demo account (demo@example.com / demo1234)
@@ -240,24 +261,92 @@ npm run db:seed
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000. Sign in with the demo account, or register your
+own user for an empty workspace.
+
+The seed is **idempotent**: it upserts by unique keys (`email`,
+`(userId, number)`, deterministic demo `client.id`s), replaces the seeded
+invoices' line items atomically, and never touches rows belonging to other
+users. Run it as many times as you like — dates refresh relative to today so
+the dashboard chart always shows the last 6 months. `npx prisma db seed`
+runs the same script.
 
 ### Environment Variables
 
-| Variable      | Description                              |
-| ------------- | ---------------------------------------- |
-| `DATABASE_URL` | PostgreSQL connection string (Neon)     |
-| `AUTH_SECRET`  | Secret used to sign session JWTs (jose) |
+| Variable       | Description                                                        |
+| -------------- | ------------------------------------------------------------------ |
+| `DATABASE_URL` | PostgreSQL connection string (Neon). Pooled URL is fine for the app. |
+| `AUTH_SECRET`  | Secret used to sign session JWTs (jose). `openssl rand -base64 32` or `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
 
-See `.env.example` for placeholders. **Never commit `.env`.**
+`.env.example` contains empty placeholders only. **Never commit `.env`.**
+
+> **Migrations on Neon pooled connections:** Prisma's `migrate` commands can
+> fail against a pooled (`-pooler`) connection string because advisory locks
+> are not supported. For `npx prisma migrate deploy`, temporarily point
+> `DATABASE_URL` at the **direct** (non-pooled) Neon URL, or adopt the
+> standard split (`DATABASE_URL` pooled for the app + `DIRECT_URL` direct for
+> migrations, which requires adding `directUrl = env("DIRECT_URL")` to the
+> datasource block). The app runtime uses `DATABASE_URL` either way.
+
+### npm scripts
+
+| Script                    | Purpose                                        |
+| ------------------------- | -------------------------------------------- |
+| `npm run dev`             | Dev server                                    |
+| `npm run build`           | Production build (no DB access)               |
+| `npm run start`           | Serve the production build                    |
+| `npm run lint`            | ESLint                                        |
+| `npm run typecheck`       | `tsc --noEmit`                                |
+| `npm test`                | Unit tests only — no database, no network     |
+| `npm run db:seed`         | Seed/refresh the demo account (needs DB)      |
+| `npm run db:migrate`      | `prisma migrate dev` (local)                  |
+| `npm run db:migrate:deploy` | `prisma migrate deploy` (production)        |
+| `npm run vercel-build`    | Vercel build command: generate + migrate + build |
+
+### Integration tests (need a database)
+
+The env-gated suites run against a real Neon database and a production
+build; they create throwaway users and clean up after themselves:
+
+```powershell
+npm run build
+$env:RUN_INVOICE_DETAIL_API_TESTS="1"; node --env-file=.env --test tests/invoice-detail-api.test.mjs
+$env:RUN_INVOICE_PDF_TESTS="1"; node --env-file=.env --test tests/invoice-pdf.test.mjs
+$env:RUN_DASHBOARD_TESTS="1"; node --env-file=.env --test tests/dashboard-api.test.mjs
+```
+
+## Deploying to Vercel + Neon
+
+1. Create a **Neon project**; copy the **pooled** connection string.
+2. In **Vercel**, import the repo and set **Node.js** to 20+ (Project
+   Settings → General → Root Settings; `engines` already requires >=20.9).
+3. Set environment variables (Production, Preview and Development):
+   - `DATABASE_URL` — the Neon pooled URL
+   - `AUTH_SECRET` — `openssl rand -base64 32` (or the Node one-liner above)
+4. Build settings: Vercel automatically uses `vercel-build` when present —
+   it runs `prisma generate && prisma migrate deploy && next build`, so the
+   schema is applied on deploy. **The seed is not part of the build** and
+   must stay manual. If `migrate deploy` fails on the pooled URL, set
+   `DATABASE_URL` (or the planned `DIRECT_URL`) to the direct Neon URL for
+   the build command only, per the note above.
+5. After the first successful deploy, run the seed once against the
+   production database from your machine:
+   ```powershell
+   $env:DATABASE_URL="<neon-url>"; npm run db:seed
+   ```
+6. Log in at the deployed URL with `demo@example.com` / `demo1234`, confirm
+   the dashboard shows data, and put the URL in the README **Live Demo**
+   section (replace `<ADD URL AFTER DEPLOY>`).
 
 ## Success Criteria
 
-- User A cannot open User B's invoice by changing the id in the URL.
-- A logged-out request to any API route (except register and login) returns 401.
-- Totals match to the cent.
-- An invoice with a past due date and status Sent is shown as Overdue.
-- The app runs on Vercel with a working demo account.
+| Criterion | Proof | Coverage |
+| --------- | ----- | -------- |
+| User A cannot open User B's invoice by changing the id in the URL | `findInvoiceForUser` returns null → 404 (`src/lib/invoices.ts`, `src/app/api/invoices/[id]/route.ts`) | Env-gated integration test (`tests/invoice-detail-api.test.mjs`) |
+| A logged-out request to any API route (except register and login) returns 401 | `requireUser` (`src/lib/auth.ts`) used by every data route | Env-gated integration tests + manual check |
+| Totals match to the cent | `computeInvoiceTotals` integer-cents math (`src/lib/invoice-totals.ts`); `tests/invoices.test.mjs`, `tests/seed-data.test.mjs` | Unit tests |
+| An invoice with a past due date and status Sent is shown as Overdue | `effectiveInvoiceStatus` (`src/lib/invoice-status.ts`) | Unit tests (`tests/invoice-detail.test.mjs`) + seeded demo data |
+| The app runs on Vercel with a working demo account | Seed script (`prisma/seed.ts`, `npm run db:seed`) + deploy section above | Manual check after deploy (owner) |
 
 ## Timebox
 

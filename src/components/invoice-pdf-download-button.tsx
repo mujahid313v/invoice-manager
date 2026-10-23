@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Spinner } from "@/components/spinner";
+import { btnPrimary } from "@/components/ui-styles";
 
 const ALLOWED_FILENAME = /^[A-Za-z0-9._-]+\.pdf$/;
 
@@ -77,7 +79,7 @@ export function InvoicePdfDownloadButton({
     <div className="mt-8 border-t border-slate-200 pt-6">
       {error ? (
         <p
-          className="mb-4 break-words rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          className="anim-fade mb-4 break-words rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
           role="alert"
         >
           {error}
@@ -86,7 +88,7 @@ export function InvoicePdfDownloadButton({
 
       {success ? (
         <p
-          className="mb-4 break-words rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
+          className="anim-fade mb-4 break-words rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
           role="status"
         >
           {success}
@@ -94,12 +96,19 @@ export function InvoicePdfDownloadButton({
       ) : null}
 
       <button
-        className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+        className={btnPrimary}
         type="button"
         onClick={download}
         disabled={pending}
       >
-        {pending ? "Generating..." : "Download PDF"}
+        {pending ? (
+          <>
+            <Spinner className="size-4" />
+            Generating...
+          </>
+        ) : (
+          "Download PDF"
+        )}
       </button>
     </div>
   );

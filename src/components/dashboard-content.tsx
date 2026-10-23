@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { InvoiceStatusBadge } from "@/components/invoice-status-badge";
 import { chartBarRatios, type DashboardData } from "@/lib/dashboard-data";
@@ -8,7 +9,7 @@ import { formatCentsDisplay } from "@/lib/money-display";
 // client bundle and the chart degrades gracefully at 360px width.
 
 const cardClassName =
-  "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6";
+  "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow duration-200 ease-out hover:shadow-md sm:p-6";
 
 // "2026-10" -> a localized month label, always evaluated in UTC so the
 // label matches the UTC month bucket it belongs to.
@@ -50,22 +51,50 @@ function StatCard({
   value,
   hint,
   accent,
+  icon,
+  iconClass,
 }: {
   label: string;
   value: string;
   hint?: string;
   accent: string;
+  icon: ReactNode;
+  iconClass: string;
 }) {
   return (
     <div className={cardClassName}>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-        {label}
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+          {label}
+        </p>
+        <span
+          aria-hidden="true"
+          className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${iconClass}`}
+        >
+          {icon}
+        </span>
+      </div>
       <p className={`mt-2 break-words text-2xl font-semibold tracking-tight ${accent}`}>
         {value}
       </p>
       {hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
     </div>
+  );
+}
+
+function IconSvg({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      className="size-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {children}
+    </svg>
   );
 }
 
@@ -123,8 +152,11 @@ function RevenueChart({
                 {ratio > 0 ? (
                   <div
                     aria-hidden="true"
-                    className="w-full max-w-12 rounded-t-md bg-emerald-600"
-                    style={{ height: `${Math.max(ratio * 100, 2)}%` }}
+                    className="anim-bar w-full max-w-12 rounded-t-md bg-gradient-to-b from-emerald-500 to-emerald-600 transition-[filter] duration-150 hover:brightness-110"
+                    style={{
+                      height: `${Math.max(ratio * 100, 2)}%`,
+                      animationDelay: `${index * 70}ms`,
+                    }}
                   />
                 ) : (
                   <div
@@ -187,8 +219,8 @@ export function DashboardContent({
 
   if (data.totalInvoiceCount === 0) {
     return (
-      <div className="mt-10 space-y-6">
-        <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+      <div className="space-y-6">
+        <section className="anim-rise rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           <h2 className="text-xl font-semibold text-slate-900">
             Nothing here yet
           </h2>
@@ -198,13 +230,13 @@ export function DashboardContent({
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-[background-color,transform] duration-150 ease-out hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:scale-[0.98]"
               href="/invoices/new"
             >
               Create your first invoice
             </Link>
             <Link
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-[border-color,color,transform] duration-150 ease-out hover:border-slate-400 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:scale-[0.98]"
               href="/clients"
             >
               Add a client
@@ -228,22 +260,36 @@ export function DashboardContent({
   }
 
   return (
-    <div className="mt-10 space-y-6">
+    <div className="space-y-6">
       <section
         aria-label="Headline numbers"
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="anim-rise-stagger grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
       >
         <StatCard
           label="Total revenue"
           value={formatCentsDisplay(data.totalRevenueCents, currency)}
           hint={`${data.paidCount} paid ${data.paidCount === 1 ? "invoice" : "invoices"}`}
           accent="text-emerald-700"
+          iconClass="bg-emerald-50 text-emerald-700"
+          icon={
+            <IconSvg>
+              <path d="M3 8.5h18M3 8.5v9a1.5 1.5 0 0 0 1.5 1.5h15a1.5 1.5 0 0 0 1.5-1.5v-9M3 8.5 5.5 5h13L21 8.5" />
+              <path d="M12 13.5v.01" />
+            </IconSvg>
+          }
         />
         <StatCard
           label="Outstanding"
           value={formatCentsDisplay(data.outstandingCents, currency)}
           hint="Sent, not yet due"
           accent="text-slate-900"
+          iconClass="bg-blue-50 text-blue-700"
+          icon={
+            <IconSvg>
+              <circle cx="12" cy="12" r="8.5" />
+              <path d="M12 7.5V12l3 2" />
+            </IconSvg>
+          }
         />
         <StatCard
           label="Overdue"
@@ -254,12 +300,30 @@ export function DashboardContent({
               : "Nothing past due"
           }
           accent={data.overdueCount > 0 ? "text-red-700" : "text-slate-900"}
+          iconClass={
+            data.overdueCount > 0
+              ? "bg-red-50 text-red-700"
+              : "bg-slate-100 text-slate-600"
+          }
+          icon={
+            <IconSvg>
+              <path d="M12 4.5 2.8 20h18.4L12 4.5Z" />
+              <path d="M12 10.5v4M12 17.5v.01" />
+            </IconSvg>
+          }
         />
         <StatCard
           label="Invoices"
           value={String(data.totalInvoiceCount)}
           hint="All time"
           accent="text-slate-900"
+          iconClass="bg-slate-100 text-slate-600"
+          icon={
+            <IconSvg>
+              <path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 7 20V3.5Z" />
+              <path d="M14 3.5V8h4M10 12.5h5M10 16h5" />
+            </IconSvg>
+          }
         />
       </section>
 
@@ -291,7 +355,7 @@ export function DashboardContent({
               {data.latestInvoices.map((invoice) => (
                 <li
                   key={invoice.id}
-                  className="rounded-xl border border-slate-200 p-4"
+                  className="rounded-xl border border-slate-200 p-4 transition-colors duration-150 ease-out hover:border-slate-300 hover:bg-slate-50/70"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <Link
@@ -333,7 +397,7 @@ export function DashboardContent({
                   {data.latestInvoices.map((invoice) => (
                     <tr
                       key={invoice.id}
-                      className="border-b border-slate-100 last:border-0"
+                      className="border-b border-slate-100 transition-colors duration-150 ease-out last:border-0 hover:bg-slate-50/70"
                     >
                       <td className="py-3 pr-4">
                         <Link

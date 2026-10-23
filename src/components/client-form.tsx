@@ -3,6 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { Spinner } from "@/components/spinner";
+import {
+  btnPrimary,
+  btnSecondary,
+  cardClass,
+  inputClass,
+  inputErrorClass,
+} from "@/components/ui-styles";
 import { clientSchema } from "@/lib/validation";
 
 type ClientRecord = {
@@ -42,10 +50,9 @@ const EMPTY_FORM: FormValues = {
   notes: "",
 };
 
-const inputClassName =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 disabled:bg-slate-50 disabled:text-slate-500";
+const inputClassName = inputClass;
 
-const errorInputClassName = "border-red-300 focus:border-red-500";
+const errorInputClassName = inputErrorClass;
 
 function toFormValues(client: ClientRecord): FormValues {
   return {
@@ -233,37 +240,34 @@ export function ClientForm(props: ClientFormProps) {
 
   if (loading) {
     return (
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <p
-          className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-600"
-          role="status"
-        >
-          Loading client...
-        </p>
+      <section className={cardClass}>
+        <div className="space-y-4" role="status" aria-live="polite">
+          <span className="sr-only">Loading client...</span>
+          <div className="skeleton-sweep h-4 w-1/3 rounded bg-slate-200" />
+          <div className="skeleton-sweep h-10 w-2/3 rounded bg-slate-200" />
+          <div className="skeleton-sweep h-24 w-1/2 rounded bg-slate-200" />
+        </div>
       </section>
     );
   }
 
   if (loadError) {
     return (
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <section className={cardClass}>
         <div
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-4"
+          className="anim-fade rounded-lg border border-red-200 bg-red-50 px-4 py-4"
           role="alert"
         >
           <p className="break-words text-sm text-red-700">{loadError}</p>
           <div className="mt-4 flex flex-wrap gap-3">
             <button
-              className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition hover:border-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className={btnSecondary}
               type="button"
               onClick={retryLoad}
             >
               Try again
             </button>
-            <Link
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-              href="/clients"
-            >
+            <Link className={btnSecondary} href="/clients">
               Back to clients
             </Link>
           </div>
@@ -273,7 +277,7 @@ export function ClientForm(props: ClientFormProps) {
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+    <section className={`${cardClass} anim-rise`}>
       <p className="text-sm text-slate-600">
         {isEdit
           ? "Update the contact details for this client."
@@ -283,7 +287,7 @@ export function ClientForm(props: ClientFormProps) {
       <form className="mt-6" onSubmit={handleSubmit} noValidate>
         {serverError ? (
           <p
-            className="mb-6 break-words rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+            className="anim-fade mb-6 break-words rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
             role="alert"
           >
             {serverError}
@@ -435,22 +439,24 @@ export function ClientForm(props: ClientFormProps) {
         </div>
 
         <div className="mt-8 flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
-          <Link
-            className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-            href="/clients"
-          >
+          <Link className={btnSecondary} href="/clients">
             Cancel
           </Link>
           <button
-            className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className={btnPrimary}
             type="submit"
             disabled={saving}
           >
-            {saving
-              ? "Saving..."
-              : isEdit
-                ? "Save changes"
-                : "Create client"}
+            {saving ? (
+              <>
+                <Spinner className="size-4" />
+                Saving...
+              </>
+            ) : isEdit ? (
+              "Save changes"
+            ) : (
+              "Create client"
+            )}
           </button>
         </div>
       </form>

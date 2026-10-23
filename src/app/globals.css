@@ -1,10 +1,126 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  --font-sans:
+    var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* One primary ink color plus the slate grays. Status colors stay
+     semantic: Draft=slate, Sent=blue, Paid=emerald, Overdue=red. */
+  --color-primary: #0f172a;
+  --color-primary-hover: #334155;
 }
 
 html {
   color-scheme: light;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Every entrance animation is gated behind prefers-reduced-motion and only
+   touches transform/opacity, so static fallbacks never hide content or
+   shift layout. */
+@media (prefers-reduced-motion: no-preference) {
+  .anim-rise {
+    animation: rise 260ms ease-out both;
+  }
+
+  .anim-rise-stagger > * {
+    animation: rise 260ms ease-out both;
+  }
+
+  .anim-rise-stagger > *:nth-child(2) {
+    animation-delay: 40ms;
+  }
+  .anim-rise-stagger > *:nth-child(3) {
+    animation-delay: 80ms;
+  }
+  .anim-rise-stagger > *:nth-child(4) {
+    animation-delay: 120ms;
+  }
+  .anim-rise-stagger > *:nth-child(5) {
+    animation-delay: 160ms;
+  }
+  .anim-rise-stagger > *:nth-child(n + 6) {
+    animation-delay: 200ms;
+  }
+
+  .anim-fade {
+    animation: fade-in 180ms ease-out both;
+  }
+
+  .anim-pop {
+    animation: pop-in 200ms ease-out both;
+  }
+
+  .anim-bar {
+    transform-origin: bottom;
+    animation: bar-grow 450ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .skeleton-sweep {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .skeleton-sweep::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.7),
+      transparent
+    );
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
 }

@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Spinner } from "@/components/spinner";
+import { btnSecondary } from "@/components/ui-styles";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -30,17 +32,24 @@ export function LogoutButton() {
   }
 
   return (
-    <div className="flex flex-col items-start gap-2 sm:items-end">
+    <div className="flex flex-col items-start gap-1.5 sm:items-end">
       <button
-        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+        className={`${btnSecondary} !min-h-10 !px-3.5 !py-2`}
         type="button"
         onClick={handleLogout}
         disabled={loading}
       >
-        {loading ? "Signing out..." : "Sign out"}
+        {loading ? (
+          <>
+            <Spinner className="size-3.5" />
+            Signing out...
+          </>
+        ) : (
+          "Sign out"
+        )}
       </button>
       {error ? (
-        <p className="text-xs text-red-600" role="alert">
+        <p className="anim-fade text-xs text-red-600" role="alert">
           {error}
         </p>
       ) : null}
