@@ -10,6 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { InvoiceStatusBadge } from "@/components/invoice-status-badge";
 import { formatMoney } from "@/lib/money";
 
 type InvoiceListItem = {
@@ -46,13 +47,6 @@ type SortOrder = "asc" | "desc";
 
 const PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 300;
-
-const statusStyles: Record<string, string> = {
-  DRAFT: "border-slate-200 bg-slate-100 text-slate-700",
-  SENT: "border-blue-200 bg-blue-50 text-blue-700",
-  PAID: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  OVERDUE: "border-red-200 bg-red-50 text-red-700 font-bold",
-};
 
 function SkeletonRows() {
   return (
@@ -455,7 +449,12 @@ export function InvoicesManager() {
                 key={invoice.id}
               >
                 <td className="py-3.5 pr-4 font-semibold text-slate-900">
-                  {invoice.number}
+                  <Link
+                    className="rounded transition hover:text-slate-600 hover:underline"
+                    href={`/invoices/${invoice.id}`}
+                  >
+                    {invoice.number}
+                  </Link>
                 </td>
                 <td className="py-3.5 pr-4 text-slate-700">
                   {invoice.clientName}
@@ -464,13 +463,7 @@ export function InvoicesManager() {
                   {formatMoney(invoice.totalCents, currency)}
                 </td>
                 <td className="py-3.5 pr-4">
-                  <span
-                    className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
-                      statusStyles[invoice.status] ?? statusStyles.DRAFT
-                    }`}
-                  >
-                    {invoice.status}
-                  </span>
+                  <InvoiceStatusBadge status={invoice.status} />
                 </td>
                 <td className="py-3.5 pr-4 text-slate-700">{invoice.issueDate}</td>
                 <td className="py-3.5 text-slate-700">{invoice.dueDate}</td>

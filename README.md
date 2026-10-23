@@ -73,7 +73,7 @@ Online payment gateways, multi-currency conversion, team accounts, mobile app.
 
 User, BusinessProfile, Client, Invoice, InvoiceItem.
 
-- **Invoice**: userId, clientId, number, status, issueDate, dueDate, taxPercent, discountCents, subtotalCents, taxCents, totalCents, notes.
+- **Invoice**: userId, clientId, number, status, issueDate, dueDate, paidAt, taxPercent, discountCents, subtotalCents, taxCents, totalCents, notes.
 - **InvoiceItem**: invoiceId, description, quantity, unitPriceCents.
 - Unique constraint on `(userId, number)`.
 - Indexes on `userId`, `status` and `dueDate`.
@@ -132,6 +132,7 @@ model Invoice {
   status         InvoiceStatus @default(DRAFT)
   issueDate      DateTime
   dueDate        DateTime
+  paidAt         DateTime?
   taxPercent     Decimal       @db.Decimal(5, 2)
   discountCents  Int           @default(0)
   subtotalCents  Int

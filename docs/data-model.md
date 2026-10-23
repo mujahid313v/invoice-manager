@@ -61,6 +61,10 @@ stored.
   rejected with 409 by the application layer.
 - `paidAt` is written in the same transaction as the status change and is
   taken from the server clock, never from the request.
+- The transition table lives in `src/lib/invoice-status.ts` and is the single
+  source of truth for both the API routes and the UI. The overdue rules live
+  in the same module, so the invoice list, the invoice detail page and the
+  API all compute the display status identically.
 - Listing a draft as "overdue" is not allowed. An invoice is **overdue** when
   `status = SENT` and `dueDate < current UTC date`. No `OVERDUE` value is
   persisted, so the status is always derived consistently.
@@ -157,11 +161,13 @@ stored.
 ## Initial migration status
 
 `prisma/migrations/20261018110032_init/migration.sql` was generated offline
-with `prisma migrate diff --from-empty`. It has **not** been applied or
-validated against PostgreSQL yet. Applying it with `prisma migrate dev`
-requires a reachable PostgreSQL instance and a shadow database. The migration
-must not be considered verified until it applies cleanly in such an
-environment.
+with `prisma migrate diff --from-empty`. It has since been applied to
+PostgreSQL: `prisma migrate status` reports that the database schema is up to
+date.
+
+`Invoice.paidAt` was added in this initial migration rather than in a
+separate one, because the Issue #1 reconciliation needed it up front and the
+column is nullable, so it is safe for the existing rows.
 
 ## Database constraints and indexes
 
@@ -192,6 +198,12 @@ layer must enforce:
 - `paidAt` from the server clock, written in the status-change transaction;
 - the 409 check before deleting a client with invoices;
 - normalized lowercase emails and uppercase ISO currency codes.
+
+Issue #6 tightens the ownership and status rules further: every mutation
+re-checks ownership **and** the current status in the where clause of the
+write itself (`updateMany` / `deleteMany` with `userId` and the required
+`status`), so the check and the write cannot disagree when two requests
+race. A row that is not owned is a 404, never a 403.
 
 If stronger guarantees are required later, these can be added as PostgreSQL
 `CHECK` constraints in a dedicated migration.

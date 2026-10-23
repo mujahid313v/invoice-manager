@@ -1,4 +1,14 @@
 import type { Prisma } from "@prisma/client";
+import { invoiceOverdueCutoff } from "./invoice-status.ts";
+
+// The overdue rules live in `@/lib/invoice-status` so the invoice list, the
+// invoice detail page and the API share exactly one implementation. They are
+// re-exported here because the list is their original home.
+export {
+  effectiveInvoiceStatus,
+  invoiceOverdueCutoff,
+} from "./invoice-status.ts";
+export type { DisplayInvoiceStatus } from "./invoice-status.ts";
 
 export type StoredInvoiceStatus = "DRAFT" | "SENT" | "PAID";
 
@@ -10,28 +20,6 @@ export type InvoiceListFilters = {
   page: number;
   pageSize: number;
 };
-
-// dueDate is a UTC calendar date, so an invoice only becomes overdue once
-// that day has fully passed; today is still payable.
-export function invoiceOverdueCutoff(now: Date): Date {
-  return new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-  );
-}
-
-export function effectiveInvoiceStatus(
-  invoice: { status: string; dueDate: Date },
-  now: Date = new Date()
-): StoredInvoiceStatus | "OVERDUE" {
-  if (
-    invoice.status === "SENT" &&
-    invoice.dueDate.getTime() < invoiceOverdueCutoff(now).getTime()
-  ) {
-    return "OVERDUE";
-  }
-
-  return invoice.status as StoredInvoiceStatus;
-}
 
 export function buildInvoiceListWhere(
   userId: string,

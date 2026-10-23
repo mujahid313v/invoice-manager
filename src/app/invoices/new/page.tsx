@@ -37,7 +37,7 @@ export default async function NewInvoicePage() {
       </header>
 
       <div className="mt-10">
-        <InvoiceForm />
+        <InvoiceForm mode="create" />
       </div>
     </main>
   );
