@@ -9,6 +9,18 @@
 // the final string around them, so no cent is ever lost to float math.
 
 import { effectiveInvoiceStatus } from "./invoice-status.ts";
+import {
+  formatCentsDisplay,
+  normalizeDisplayCurrency,
+} from "./money-display.ts";
+
+// The shared currency formatter lives in `@/lib/money-display` so the PDF
+// and the dashboard render identical amounts. It is re-exported here
+// because this module is its original home.
+export {
+  formatCentsDisplay,
+  normalizeDisplayCurrency as normalizePdfCurrency,
+} from "./money-display.ts";
 
 export type InvoicePdfItemRecord = {
   description: string;
@@ -87,91 +99,6 @@ const DISPLAY_STATUS_LABELS: Record<string, string> = {
   OVERDUE: "Overdue",
   PAID: "Paid",
 };
-
-// A currency must look like an ISO 4217 code and be known to Intl; anything
-// else falls back to USD instead of throwing at render time.
-export function normalizePdfCurrency(currency: string | null | undefined): string {
-  const code = (currency ?? "").trim().toUpperCase();
-
-  if (!/^[A-Z]{3}$/.test(code)) {
-    return "USD";
-  }
-
-  try {
-    new Intl.NumberFormat("en-US", { style: "currency", currency: code });
-
-    return code;
-  } catch {
-    return "USD";
-  }
-}
-
-// Integer cents -> localized currency string, without float arithmetic:
-// the amount is split into integer major and minor parts, only the major
-// part is handed to Intl (for the symbol and the digit grouping), and the
-// two-digit minor part is spliced into the result as text.
-export function formatCentsDisplay(
-  cents: number,
-  currency: string | null | undefined
-): string {
-  if (!Number.isSafeInteger(cents) || cents < 0) {
-    throw new RangeError("Money must be a non-negative safe integer in cents.");
-  }
-
-  const code = normalizePdfCurrency(currency);
-  let parts: { type: string; value: string }[];
-
-  try {
-    parts = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: code,
-      maximumFractionDigits: 0,
-    }).formatToParts(Math.trunc(cents / 100));
-  } catch {
-    parts = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0,
-    }).formatToParts(Math.trunc(cents / 100));
-  }
-
-  // Split Intl's output into symbol text and grouped digits, then splice the
-  // exact two-digit minor part in. Only integer and group parts may touch the
-  // number; currency and literal parts around it are kept as-is.
-  const firstDigit = parts.findIndex(
-    (part) => part.type === "integer" || part.type === "group"
-  );
-  const lastDigit = (() => {
-    for (let index = parts.length - 1; index >= 0; index -= 1) {
-      const type = parts[index].type;
-
-      if (type === "integer" || type === "group") {
-        return index;
-      }
-    }
-
-    return -1;
-  })();
-
-  const prefix = parts
-    .slice(0, Math.max(firstDigit, 0))
-    .filter((part) => part.type !== "decimal" && part.type !== "fraction")
-    .map((part) => part.value)
-    .join("");
-  const integerText = parts
-    .slice(firstDigit, lastDigit + 1)
-    .filter((part) => part.type === "integer" || part.type === "group")
-    .map((part) => part.value)
-    .join("");
-  const suffix = parts
-    .slice(lastDigit + 1)
-    .filter((part) => part.type !== "decimal" && part.type !== "fraction")
-    .map((part) => part.value)
-    .join("");
-  const minor = String(cents % 100).padStart(2, "0");
-
-  return `${prefix}${integerText}.${minor}${suffix}`;
-}
 
 // The filename is the invoice number, reduced to characters that are safe
 // inside Content-Disposition, with a fixed fallback.
@@ -274,7 +201,7 @@ export function buildInvoicePdfViewModel(
   profile: InvoicePdfProfile,
   now: Date = new Date()
 ): InvoicePdfViewModel {
-  const currency = normalizePdfCurrency(profile?.currency);
+  const currency = normalizeDisplayCurrency(profile?.currency);
   const displayStatus = effectiveInvoiceStatus(invoice, now);
 
   return {

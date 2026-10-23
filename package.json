@@ -12,7 +12,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/schema.test.mjs tests/auth.test.mjs tests/business-profile.test.mjs tests/clients.test.mjs tests/invoices.test.mjs tests/invoice-list.test.mjs tests/invoice-detail.test.mjs tests/invoice-pdf-data.test.mjs",
+    "test": "node --test tests/schema.test.mjs tests/auth.test.mjs tests/business-profile.test.mjs tests/clients.test.mjs tests/invoices.test.mjs tests/invoice-list.test.mjs tests/invoice-detail.test.mjs tests/invoice-pdf-data.test.mjs tests/dashboard-data.test.mjs",
     "db:validate": "prisma validate",
     "db:format": "prisma format",
     "db:generate": "prisma generate",
