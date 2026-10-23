@@ -39,6 +39,7 @@ export type InvoiceFormInitialValues = {
   dueDate: string;
   taxPercent: string;
   discountCents: number;
+  notes: string;
   items: Array<{
     description: string;
     quantity: number;
@@ -120,6 +121,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
   const [discountInput, setDiscountInput] = useState(
     initialValues ? formatCentsInput(initialValues.discountCents) : ""
   );
+  const [notes, setNotes] = useState(initialValues?.notes ?? "");
   const [items, setItems] = useState<ItemRow[]>(() =>
     initialValues ? toInitialItemRows(initialValues.items) : [newItemRow(0)]
   );
@@ -246,6 +248,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
       clientId,
       issueDate,
       dueDate,
+      notes,
       ...(taxPercentInput.trim() === ""
         ? {}
         : { taxPercent: Number(taxPercentInput) }),
@@ -298,6 +301,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
         discountCents: toFieldErrorMessage(issues, (path) =>
           path.startsWith("discountCents")
         ),
+        notes: toFieldErrorMessage(issues, (path) => path.startsWith("notes")),
         itemsRoot: toFieldErrorMessage(issues, (path) => path === "items"),
       };
 
@@ -366,7 +370,11 @@ export function InvoiceForm(props: InvoiceFormProps) {
         return;
       }
 
-      router.push(isEdit && invoiceId ? `/invoices/${invoiceId}` : "/invoices");
+      router.push(
+        isEdit && invoiceId
+          ? `/invoices/${invoiceId}?saved=edit`
+          : "/invoices"
+      );
       router.refresh();
     } catch {
       setServerError("Network error. Check your connection and try again.");
@@ -727,6 +735,34 @@ export function InvoiceForm(props: InvoiceFormProps) {
             {fieldErrors.discountCents ? (
               <span className="mt-1.5 block text-xs text-red-600">
                 {fieldErrors.discountCents}
+              </span>
+            ) : null}
+          </label>
+        </div>
+
+        <div className="mt-8">
+          <label className="block min-w-0">
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">
+              Notes{" "}
+              <span className="font-normal text-slate-500">
+                (optional, shown on the invoice)
+              </span>
+            </span>
+            <textarea
+              className={`${inputClassName} min-h-24 resize-y ${
+                fieldErrors.notes ? errorInputClassName : ""
+              }`}
+              name="notes"
+              maxLength={2000}
+              placeholder="e.g. Thank you for your business!"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              aria-invalid={fieldErrors.notes ? true : undefined}
+              disabled={saving}
+            />
+            {fieldErrors.notes ? (
+              <span className="mt-1.5 block text-xs text-red-600">
+                {fieldErrors.notes}
               </span>
             ) : null}
           </label>

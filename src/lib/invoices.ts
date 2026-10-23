@@ -58,6 +58,7 @@ type InvoiceRecord = {
   taxCents: number;
   totalCents: number;
   clientId: string;
+  notes?: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -77,6 +78,7 @@ export function serializeInvoice(
     taxCents: invoice.taxCents,
     totalCents: invoice.totalCents,
     clientId: invoice.clientId,
+    notes: invoice.notes ?? null,
     createdAt: invoice.createdAt,
     updatedAt: invoice.updatedAt,
     items: invoice.items.map((item) => ({
@@ -192,6 +194,7 @@ export async function createInvoiceForUser(
         number: formatInvoiceNumber(counter.nextInvoiceNumber - 1),
         issueDate: parseDateOnly(input.issueDate),
         dueDate: parseDateOnly(input.dueDate),
+        notes: input.notes ?? null,
         taxPercent,
         discountCents,
         subtotalCents: totals.subtotalCents,
@@ -235,6 +238,20 @@ export async function findInvoiceForUser(
       },
     },
   });
+}
+
+// A cheap ownership probe for the route layout. It only selects the id, so
+// it stays cheap while still answering "is this invoice yours?".
+export async function invoiceExistsForUser(
+  userId: string,
+  invoiceId: string
+): Promise<boolean> {
+  const invoice = await getPrisma().invoice.findFirst({
+    where: { id: invoiceId, userId },
+    select: { id: true },
+  });
+
+  return invoice !== null;
 }
 
 // Edits a draft invoice. Ownership and the current status are re-checked in
@@ -294,6 +311,7 @@ export async function updateInvoiceForUser(
         clientId: client.id,
         issueDate: parseDateOnly(input.issueDate),
         dueDate: parseDateOnly(input.dueDate),
+        notes: input.notes ?? null,
         taxPercent,
         discountCents,
         subtotalCents: totals.subtotalCents,

@@ -382,6 +382,74 @@ test(
       assert.equal("userId" in response.body, false);
     });
 
+    await t.test("notes round-trip through create and edit", async () => {
+      // Create with untrimmed notes.
+      const created = await createInvoice(cookieA, {
+        ...baseInvoice,
+        notes: "  Thank you for your business!  ",
+      });
+
+      assert.equal(created.status, 201);
+      assert.equal(created.body.notes, "Thank you for your business!");
+
+      const notesId = created.body.id;
+
+      // The detail GET returns the stored notes.
+      const read = await api(`/api/invoices/${notesId}`, { cookie: cookieA });
+
+      assert.equal(read.status, 200);
+      assert.equal(read.body.notes, "Thank you for your business!");
+
+      // Edit replaces the notes.
+      const edited = await api(`/api/invoices/${notesId}`, {
+        method: "PUT",
+        cookie: cookieA,
+        body: { ...baseInvoice, notes: "Paid within 30 days." },
+      });
+
+      assert.equal(edited.status, 200);
+      assert.equal(edited.body.notes, "Paid within 30 days.");
+
+      // An empty string clears the notes back to null.
+      const cleared = await api(`/api/invoices/${notesId}`, {
+        method: "PUT",
+        cookie: cookieA,
+        body: { ...baseInvoice, notes: "   " },
+      });
+
+      assert.equal(cleared.status, 200);
+      assert.equal(cleared.body.notes, null);
+
+      const afterClear = await api(`/api/invoices/${notesId}`, {
+        cookie: cookieA,
+      });
+
+      assert.equal(afterClear.body.notes, null);
+
+      // Over 2000 characters is rejected with a 400 and changes nothing.
+      const tooLong = await api(`/api/invoices/${notesId}`, {
+        method: "PUT",
+        cookie: cookieA,
+        body: { ...baseInvoice, notes: "x".repeat(2001) },
+      });
+
+      assert.equal(tooLong.status, 400);
+      assertErrorBody(tooLong.body);
+
+      const unchanged = await api(`/api/invoices/${notesId}`, {
+        cookie: cookieA,
+      });
+
+      assert.equal(unchanged.body.notes, null);
+
+      const cleanup = await api(`/api/invoices/${notesId}`, {
+        method: "DELETE",
+        cookie: cookieA,
+      });
+
+      assert.equal(cleanup.status, 204);
+    });
+
     await t.test(
       "PUT on a draft recomputes totals and replaces the line items",
       async () => {

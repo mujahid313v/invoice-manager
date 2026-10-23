@@ -74,6 +74,13 @@ const invoiceFields = {
     .array(invoiceItemSchema)
     .min(1, "Add at least one line item.")
     .max(100, "Too many line items."),
+  notes: z
+    .string()
+    .trim()
+    .max(2000, "Notes must be at most 2000 characters.")
+    .transform((value) => (value.length === 0 ? null : value))
+    .nullable()
+    .optional(),
 };
 
 export const invoiceCreateSchema = z.strictObject(invoiceFields);

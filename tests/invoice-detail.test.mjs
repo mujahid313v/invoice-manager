@@ -13,6 +13,7 @@ const {
 const {
   invoiceStatusUpdateSchema,
   invoiceUpdateSchema,
+  invoiceCreateSchema,
 } = await import("../src/lib/invoice-schema.ts");
 
 const { computeInvoiceTotals } = await import("../src/lib/invoice-totals.ts");
@@ -195,4 +196,43 @@ test("totals after an edit are recomputed on the server to the cent", () => {
   assert.equal(totals.taxCents, 83);
   assert.equal(totals.totalCents, 1083);
   assert.equal(Number.isInteger(totals.totalCents), true);
+});
+
+test("the invoice schemas accept optional notes and normalize them", () => {
+  const base = {
+    clientId: "client-1",
+    issueDate: "2026-10-19",
+    dueDate: "2026-11-02",
+    items: [{ description: "Design", quantity: 2, unitPriceCents: 50000 }],
+  };
+
+  for (const schema of [invoiceCreateSchema, invoiceUpdateSchema]) {
+    // Missing notes stays undefined.
+    assert.equal(schema.safeParse(base).data.notes, undefined);
+
+    // Notes are trimmed.
+    assert.equal(
+      schema.safeParse({ ...base, notes: "  Thank you!  " }).data.notes,
+      "Thank you!"
+    );
+
+    // An empty (or whitespace-only) string becomes null.
+    assert.equal(schema.safeParse({ ...base, notes: "" }).data.notes, null);
+    assert.equal(
+      schema.safeParse({ ...base, notes: "   " }).data.notes,
+      null
+    );
+
+    // Over 2000 characters is rejected.
+    assert.equal(
+      schema.safeParse({ ...base, notes: "x".repeat(2001) }).success,
+      false
+    );
+
+    // Exactly 2000 characters is accepted.
+    assert.equal(
+      schema.safeParse({ ...base, notes: "x".repeat(2000) }).success,
+      true
+    );
+  }
 });
