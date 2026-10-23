@@ -3,6 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { Spinner } from "@/components/spinner";
+import {
+  btnPrimary,
+  btnSecondary,
+  cardClass,
+  inputClass,
+  inputErrorClass,
+} from "@/components/ui-styles";
 import { computeInvoiceTotals, formatCentsInput, formatMoney, parseCentsInput } from "@/lib/money";
 import { invoiceCreateSchema, invoiceUpdateSchema } from "@/lib/invoice-schema";
 
@@ -51,10 +59,9 @@ type InvoiceFormProps =
   | { mode: "create" }
   | { mode: "edit"; invoiceId: string; initialValues: InvoiceFormInitialValues };
 
-const inputClassName =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 disabled:bg-slate-50 disabled:text-slate-500";
+const inputClassName = inputClass;
 
-const errorInputClassName = "border-red-300 focus:border-red-500";
+const errorInputClassName = inputErrorClass;
 
 function toDateInputValue(date: Date): string {
   const year = date.getUTCFullYear();
@@ -389,13 +396,13 @@ export function InvoiceForm(props: InvoiceFormProps) {
 
   if (loading) {
     return (
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <div className="animate-pulse space-y-4" role="status" aria-live="polite">
+      <section className={cardClass}>
+        <div className="space-y-4" role="status" aria-live="polite">
           <span className="sr-only">Loading invoice form...</span>
-          <div className="h-4 w-1/3 rounded bg-slate-200" />
-          <div className="h-10 w-2/3 rounded bg-slate-200" />
-          <div className="h-10 w-1/2 rounded bg-slate-200" />
-          <div className="h-24 w-full rounded bg-slate-200" />
+          <div className="skeleton-sweep h-4 w-1/3 rounded bg-slate-200" />
+          <div className="skeleton-sweep h-10 w-2/3 rounded bg-slate-200" />
+          <div className="skeleton-sweep h-10 w-1/2 rounded bg-slate-200" />
+          <div className="skeleton-sweep h-24 w-full rounded bg-slate-200" />
         </div>
       </section>
     );
@@ -403,24 +410,21 @@ export function InvoiceForm(props: InvoiceFormProps) {
 
   if (loadError) {
     return (
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <section className={cardClass}>
         <div
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-4"
+          className="anim-fade rounded-lg border border-red-200 bg-red-50 px-4 py-4"
           role="alert"
         >
           <p className="break-words text-sm text-red-700">{loadError}</p>
           <div className="mt-4 flex flex-wrap gap-3">
             <button
-              className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition hover:border-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className={btnSecondary}
               type="button"
               onClick={retryLoad}
             >
               Try again
             </button>
-            <Link
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-              href="/invoices"
-            >
+            <Link className={btnSecondary} href="/invoices">
               Back to invoices
             </Link>
           </div>
@@ -431,8 +435,8 @@ export function InvoiceForm(props: InvoiceFormProps) {
 
   if (clients.length === 0) {
     return (
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+      <section className={cardClass}>
+        <div className="anim-rise rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
           <h2 className="text-lg font-semibold text-slate-900">
             No clients yet
           </h2>
@@ -441,16 +445,10 @@ export function InvoiceForm(props: InvoiceFormProps) {
             started.
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-3">
-            <Link
-              className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
-              href="/clients/new"
-            >
+            <Link className={btnPrimary} href="/clients/new">
               Add a client
             </Link>
-            <Link
-              className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-              href="/invoices"
-            >
+            <Link className={btnSecondary} href="/invoices">
               Back to invoices
             </Link>
           </div>
@@ -460,7 +458,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+    <section className={`${cardClass} anim-rise`}>
       <p className="text-sm text-slate-600">
         {isEdit
           ? "Update the invoice details. Only draft invoices can be edited."
@@ -470,7 +468,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
       <form className="mt-6" onSubmit={handleSubmit} noValidate>
         {serverError ? (
           <p
-            className="mb-6 break-words rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+            className="anim-fade mb-6 break-words rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
             role="alert"
           >
             {serverError}
@@ -560,7 +558,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
               Line items
             </h2>
             <button
-              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition-[border-color,color,transform] duration-150 ease-out hover:border-slate-400 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
               onClick={addItem}
               disabled={saving || items.length >= 100}
@@ -578,7 +576,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
           <div className="mt-4 space-y-3">
             {items.map((item, index) => (
               <div
-                className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                className="anim-rise rounded-xl border border-slate-200 bg-slate-50 p-4"
                 key={item.key}
               >
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_5.5rem_8.5rem_2.5rem] sm:items-start">
@@ -656,7 +654,7 @@ export function InvoiceForm(props: InvoiceFormProps) {
 
                   <div className="flex items-end sm:justify-end">
                     <button
-                      className="rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm font-semibold text-slate-500 transition hover:border-red-300 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm font-semibold text-slate-500 transition-[border-color,color,transform] duration-150 ease-out hover:border-red-300 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                       type="button"
                       onClick={() => removeItem(item.key)}
                       disabled={saving || items.length <= 1}
@@ -816,23 +814,26 @@ export function InvoiceForm(props: InvoiceFormProps) {
 
         <div className="mt-8 flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
           <Link
-            className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+            className={btnSecondary}
             href={isEdit && invoiceId ? `/invoices/${invoiceId}` : "/invoices"}
           >
             Cancel
           </Link>
           <button
-            className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className={btnPrimary}
             type="submit"
             disabled={saving}
           >
-            {saving
-              ? isEdit
-                ? "Saving..."
-                : "Creating..."
-              : isEdit
-                ? "Save changes"
-                : "Create invoice"}
+            {saving ? (
+              <>
+                <Spinner className="size-4" />
+                {isEdit ? "Saving..." : "Creating..."}
+              </>
+            ) : isEdit ? (
+              "Save changes"
+            ) : (
+              "Create invoice"
+            )}
           </button>
         </div>
       </form>

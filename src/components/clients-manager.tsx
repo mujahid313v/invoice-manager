@@ -3,6 +3,16 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { EmptyState } from "@/components/ui";
+import { Spinner } from "@/components/spinner";
+import {
+  btnDanger,
+  btnDangerOutline,
+  btnPrimary,
+  btnSecondary,
+  cardClass,
+  inputClass,
+} from "@/components/ui-styles";
 
 type Client = {
   id: string;
@@ -19,16 +29,13 @@ type ClientErrorResponse = {
   error?: string;
 };
 
-const searchInputClassName =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10";
-
 function SkeletonList() {
   return (
     <div className="mt-6 space-y-3" role="status" aria-live="polite">
       <span className="sr-only">Loading clients...</span>
       {[0, 1, 2].map((item) => (
         <div
-          className="animate-pulse rounded-xl border border-slate-200 bg-slate-50 p-5"
+          className="skeleton-sweep rounded-xl border border-slate-200 bg-slate-50 p-5"
           key={item}
         >
           <div className="h-4 w-1/3 rounded bg-slate-200" />
@@ -52,6 +59,7 @@ export function ClientsManager() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const requestId = useRef(0);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -146,6 +154,19 @@ export function ClientsManager() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [deleteTarget, deleting]);
 
+  // Move focus into the dialog while it is open and return it to the
+  // trigger when it closes.
+  useEffect(() => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    const previous = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+
+    return () => previous?.focus();
+  }, [deleteTarget]);
+
   function retryLoad() {
     setError(null);
     setReloadToken((current) => current + 1);
@@ -202,14 +223,14 @@ export function ClientsManager() {
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+    <section className={cardClass}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <label className="block w-full max-w-md">
           <span className="mb-1.5 block text-sm font-medium text-slate-700">
             Search clients
           </span>
           <input
-            className={searchInputClassName}
+            className={inputClass}
             type="search"
             name="search"
             placeholder="Search by name or email"
@@ -218,7 +239,7 @@ export function ClientsManager() {
           />
         </label>
         <Link
-          className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 sm:mt-6"
+          className={`${btnPrimary} sm:mt-6`}
           href="/clients/new"
         >
           New client
@@ -229,12 +250,12 @@ export function ClientsManager() {
         <SkeletonList />
       ) : error ? (
         <div
-          className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-4"
+          className="anim-fade mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-4"
           role="alert"
         >
           <p className="break-words text-sm text-red-700">{error}</p>
           <button
-            className="mt-3 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition hover:border-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className={`${btnDangerOutline} mt-3`}
             type="button"
             onClick={retryLoad}
           >
@@ -242,47 +263,41 @@ export function ClientsManager() {
           </button>
         </div>
       ) : clients.length === 0 ? (
-        <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+        <div className="mt-6">
           {query ? (
-            <>
-              <h2 className="text-lg font-semibold text-slate-900">
-                No matching clients
-              </h2>
-              <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">
-                No clients match &quot;{query}&quot;. Try a different name or
-                email address.
-              </p>
+            <EmptyState
+              title="No matching clients"
+              message={
+                <>
+                  No clients match &quot;{query}&quot;. Try a different name or
+                  email address.
+                </>
+              }
+            >
               <button
-                className="mt-5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                className={btnSecondary}
                 type="button"
                 onClick={clearSearch}
               >
                 Clear search
               </button>
-            </>
+            </EmptyState>
           ) : (
-            <>
-              <h2 className="text-lg font-semibold text-slate-900">
-                No clients yet
-              </h2>
-              <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">
-                Add your first client to keep their billing details in one
-                place.
-              </p>
-              <Link
-                className="mt-5 inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
-                href="/clients/new"
-              >
+            <EmptyState
+              title="No clients yet"
+              message="Add your first client to keep their billing details in one place."
+            >
+              <Link className={btnPrimary} href="/clients/new">
                 Add a client
               </Link>
-            </>
+            </EmptyState>
           )}
         </div>
       ) : (
-        <ul className="mt-6 space-y-3" aria-label="Clients">
+        <ul className="anim-rise-stagger mt-6 space-y-3" aria-label="Clients">
           {clients.map((client) => (
             <li
-              className="rounded-xl border border-slate-200 p-5 transition hover:border-slate-300"
+              className="rounded-xl border border-slate-200 p-5 shadow-sm transition-[border-color,box-shadow,transform] duration-150 ease-out hover:border-slate-300 hover:shadow-md"
               key={client.id}
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -318,13 +333,13 @@ export function ClientsManager() {
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Link
-                    className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+                    className={`${btnSecondary} !px-4`}
                     href={`/clients/${client.id}/edit`}
                   >
                     Edit
                   </Link>
                   <button
-                    className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                    className={`${btnDangerOutline} !px-4`}
                     type="button"
                     aria-label={`Delete ${client.name}`}
                     onClick={() => {
@@ -344,7 +359,7 @@ export function ClientsManager() {
       {deleteTarget ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <button
-            className="absolute inset-0 bg-slate-900/40"
+            className="anim-fade absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
             type="button"
             aria-label="Cancel deletion"
             onClick={() => {
@@ -355,10 +370,12 @@ export function ClientsManager() {
             }}
           />
           <div
-            className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+            className="anim-pop relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl outline-none"
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-client-title"
+            tabIndex={-1}
+            ref={dialogRef}
           >
             <h2
               className="text-lg font-semibold text-slate-900"
@@ -373,7 +390,7 @@ export function ClientsManager() {
 
             {deleteError ? (
               <p
-                className="mt-4 break-words rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                className="anim-fade mt-4 break-words rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
                 role="alert"
               >
                 {deleteError}
@@ -382,7 +399,7 @@ export function ClientsManager() {
 
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
-                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                className={btnSecondary}
                 type="button"
                 onClick={() => {
                   setDeleteTarget(null);
@@ -393,12 +410,19 @@ export function ClientsManager() {
                 Cancel
               </button>
               <button
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                className={btnDanger}
                 type="button"
                 onClick={confirmDelete}
                 disabled={deleting}
               >
-                {deleting ? "Deleting..." : "Delete client"}
+                {deleting ? (
+                  <>
+                    <Spinner className="size-4" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete client"
+                )}
               </button>
             </div>
           </div>

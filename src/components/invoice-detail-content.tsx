@@ -48,13 +48,13 @@ export async function InvoiceDetailContent({
     <>
       {saved === "edit" ? (
         <p
-          className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
+          className="anim-fade mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
           role="status"
         >
           Invoice updated. Totals were recalculated on the server.
         </p>
       ) : null}
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+    <section className="anim-rise rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
       <div className="flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h2 className="text-xl font-semibold text-slate-900">

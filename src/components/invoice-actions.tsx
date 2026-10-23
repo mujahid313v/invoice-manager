@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Spinner } from "@/components/spinner";
+import {
+  btnDanger,
+  btnDangerOutline,
+  btnPrimary,
+  btnSecondary,
+} from "@/components/ui-styles";
 
 type InvoiceActionsProps = {
   invoiceId: string;
@@ -19,6 +26,7 @@ export function InvoiceActions({ invoiceId, status }: InvoiceActionsProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!confirmingDelete) {
@@ -34,6 +42,19 @@ export function InvoiceActions({ invoiceId, status }: InvoiceActionsProps) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [confirmingDelete, pending]);
+
+  // Move focus into the dialog while it is open and return it to the
+  // trigger when it closes.
+  useEffect(() => {
+    if (!confirmingDelete) {
+      return;
+    }
+
+    const previous = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+
+    return () => previous?.focus();
+  }, [confirmingDelete]);
 
   async function changeStatus(next: "SENT" | "PAID") {
     if (pending) {
@@ -133,7 +154,7 @@ export function InvoiceActions({ invoiceId, status }: InvoiceActionsProps) {
     <div className="mt-8 border-t border-slate-200 pt-6">
       {error ? (
         <p
-          className="mb-4 break-words rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          className="anim-fade mb-4 break-words rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
           role="alert"
         >
           {error}
@@ -142,7 +163,7 @@ export function InvoiceActions({ invoiceId, status }: InvoiceActionsProps) {
 
       {success ? (
         <p
-          className="mb-4 break-words rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
+          className="anim-fade mb-4 break-words rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
           role="status"
         >
           {success}
@@ -151,39 +172,50 @@ export function InvoiceActions({ invoiceId, status }: InvoiceActionsProps) {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         {status === "DRAFT" ? (
-          <Link
-            className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
-            href={`/invoices/${invoiceId}/edit`}
-          >
+          <Link className={btnPrimary} href={`/invoices/${invoiceId}/edit`}>
             Edit
           </Link>
         ) : null}
 
         {status === "DRAFT" ? (
           <button
-            className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+            className={btnSecondary}
             type="button"
             onClick={() => changeStatus("SENT")}
             disabled={pending !== null}
           >
-            {pending === "SENT" ? "Marking as sent..." : "Mark as sent"}
+            {pending === "SENT" ? (
+              <>
+                <Spinner className="size-4" />
+                Marking as sent...
+              </>
+            ) : (
+              "Mark as sent"
+            )}
           </button>
         ) : null}
 
         {status === "SENT" ? (
           <button
-            className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+            className={btnSecondary}
             type="button"
             onClick={() => changeStatus("PAID")}
             disabled={pending !== null}
           >
-            {pending === "PAID" ? "Marking as paid..." : "Mark as paid"}
+            {pending === "PAID" ? (
+              <>
+                <Spinner className="size-4" />
+                Marking as paid...
+              </>
+            ) : (
+              "Mark as paid"
+            )}
           </button>
         ) : null}
 
         {status === "DRAFT" ? (
           <button
-            className="rounded-lg border border-red-300 bg-white px-5 py-2.5 text-sm font-semibold text-red-700 transition hover:border-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className={btnDangerOutline}
             type="button"
             onClick={() => setConfirmingDelete(true)}
             disabled={pending !== null}
@@ -196,7 +228,7 @@ export function InvoiceActions({ invoiceId, status }: InvoiceActionsProps) {
       {confirmingDelete ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <button
-            className="absolute inset-0 bg-slate-900/40"
+            className="anim-fade absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
             type="button"
             aria-label="Cancel deletion"
             onClick={() => {
@@ -206,10 +238,12 @@ export function InvoiceActions({ invoiceId, status }: InvoiceActionsProps) {
             }}
           />
           <div
-            className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+            className="anim-pop relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl outline-none"
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-invoice-title"
+            tabIndex={-1}
+            ref={dialogRef}
           >
             <h2
               className="text-lg font-semibold text-slate-900"
@@ -224,7 +258,7 @@ export function InvoiceActions({ invoiceId, status }: InvoiceActionsProps) {
 
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
-                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                className={btnSecondary}
                 type="button"
                 onClick={() => setConfirmingDelete(false)}
                 disabled={pending !== null}
@@ -232,12 +266,19 @@ export function InvoiceActions({ invoiceId, status }: InvoiceActionsProps) {
                 Cancel
               </button>
               <button
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                className={btnDanger}
                 type="button"
                 onClick={deleteInvoice}
                 disabled={pending !== null}
               >
-                {pending === "DELETE" ? "Deleting..." : "Delete invoice"}
+                {pending === "DELETE" ? (
+                  <>
+                    <Spinner className="size-4" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete invoice"
+                )}
               </button>
             </div>
           </div>

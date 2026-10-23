@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { Spinner } from "@/components/spinner";
+import { btnPrimary, inputClass } from "@/components/ui-styles";
 
-const inputClassName =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 disabled:bg-slate-50 disabled:text-slate-500";
+const inputClassName = inputClass;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,10 +45,10 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-12">
-      <section className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/70">
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 px-4 py-12">
+      <section className="anim-rise w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/70">
         <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold tracking-tight text-white">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-sm font-bold tracking-tight text-white shadow-sm">
             IM
           </div>
           <div>
@@ -70,7 +71,7 @@ export default function LoginPage() {
         <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
           {error ? (
             <p
-              className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+              className="anim-fade rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
               role="alert"
             >
               {error}
@@ -111,11 +112,18 @@ export default function LoginPage() {
           </label>
 
           <button
-            className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className={`${btnPrimary} w-full`}
             type="submit"
             disabled={submitting}
           >
-            {submitting ? "Signing in..." : "Sign in"}
+            {submitting ? (
+              <>
+                <Spinner className="size-4" />
+                Signing in...
+              </>
+            ) : (
+              "Sign in"
+            )}
           </button>
         </form>
 

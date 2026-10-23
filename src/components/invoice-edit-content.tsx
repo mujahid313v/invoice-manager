@@ -27,7 +27,7 @@ export async function InvoiceEditContent({
 
   if (invoice.status !== "DRAFT") {
     return (
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <section className="anim-rise rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <h2 className="text-xl font-semibold text-slate-900">
           This invoice can no longer be edited
         </h2>
@@ -38,7 +38,7 @@ export async function InvoiceEditContent({
         </p>
         <div className="mt-6">
           <Link
-            className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-[background-color,transform] duration-150 ease-out hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:scale-[0.98]"
             href={`/invoices/${invoice.id}`}
           >
             Back to invoice

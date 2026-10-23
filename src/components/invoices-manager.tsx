@@ -11,6 +11,12 @@ import {
   type ReactNode,
 } from "react";
 import { InvoiceStatusBadge } from "@/components/invoice-status-badge";
+import {
+  btnPrimary,
+  btnSecondary,
+  cardClass,
+  inputClass,
+} from "@/components/ui-styles";
 import { formatMoney } from "@/lib/money";
 
 type InvoiceListItem = {
@@ -54,7 +60,7 @@ function SkeletonRows() {
       <span className="sr-only">Loading invoices...</span>
       {[0, 1, 2].map((item) => (
         <div
-          className="animate-pulse rounded-xl border border-slate-200 bg-slate-50 p-5"
+          className="skeleton-sweep rounded-xl border border-slate-200 bg-slate-50 p-5"
           key={item}
         >
           <div className="h-4 w-1/4 rounded bg-slate-200" />
@@ -279,27 +285,12 @@ export function InvoicesManager() {
 
   function renderSection(body: ReactNode) {
     return (
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-900">Invoices</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Sending, paying and PDF exports come in later phases.
-            </p>
-          </div>
-          <Link
-            className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
-            href="/invoices/new"
-          >
-            New invoice
-          </Link>
-        </div>
-
-        <div className="mt-6 grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem_10rem]">
+      <section className={cardClass}>
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem_10rem]">
           <label className="block min-w-0">
             <span className="sr-only">Search invoices</span>
             <input
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+              className={inputClass}
               type="search"
               placeholder="Search by number or client name..."
               aria-label="Search invoices by number or client name"
@@ -314,7 +305,7 @@ export function InvoicesManager() {
               Status
             </span>
             <select
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+              className={inputClass}
               aria-label="Filter by status"
               value={statusFilter}
               onChange={(event) =>
@@ -334,7 +325,7 @@ export function InvoicesManager() {
               Sort order
             </span>
             <select
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+              className={inputClass}
               aria-label="Sort direction"
               value={order}
               onChange={(event) => changeOrder(event.target.value as SortOrder)}
@@ -357,12 +348,12 @@ export function InvoicesManager() {
   if (error) {
     return renderSection(
       <div
-        className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-4"
+        className="anim-fade mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-4"
         role="alert"
       >
         <p className="break-words text-sm text-red-700">{error}</p>
         <button
-          className="mt-3 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition hover:border-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-3 inline-flex min-h-11 items-center justify-center rounded-lg border border-red-300 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition-[border-color,background-color,transform] duration-150 ease-out hover:border-red-400 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 active:scale-[0.98]"
           type="button"
           onClick={retryLoad}
         >
@@ -374,7 +365,7 @@ export function InvoicesManager() {
 
   if (invoices.length === 0) {
     return renderSection(
-      <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+      <div className="anim-rise mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
         <h3 className="text-lg font-semibold text-slate-900">
           {hasActiveFilters ? "No invoices match your filters" : "No invoices yet"}
         </h3>
@@ -386,17 +377,14 @@ export function InvoicesManager() {
         <div className="mt-5 flex flex-wrap justify-center gap-3">
           {hasActiveFilters ? (
             <button
-              className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+              className={btnSecondary}
               type="button"
               onClick={clearFilters}
             >
               Clear filters
             </button>
           ) : (
-            <Link
-              className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
-              href="/invoices/new"
-            >
+            <Link className={btnPrimary} href="/invoices/new">
               Create an invoice
             </Link>
           )}
@@ -407,7 +395,7 @@ export function InvoicesManager() {
 
   return renderSection(
     <>
-      <div className="mt-6 overflow-x-auto">
+      <div className="anim-fade mt-6 overflow-x-auto">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
@@ -445,12 +433,12 @@ export function InvoicesManager() {
           <tbody>
             {invoices.map((invoice) => (
               <tr
-                className="border-b border-slate-100 last:border-0"
+                className="border-b border-slate-100 transition-colors duration-150 ease-out last:border-0 hover:bg-slate-50/70"
                 key={invoice.id}
               >
                 <td className="py-3.5 pr-4 font-semibold text-slate-900">
                   <Link
-                    className="rounded transition hover:text-slate-600 hover:underline"
+                    className="rounded underline-offset-4 transition-[color] duration-150 ease-out hover:text-slate-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     href={`/invoices/${invoice.id}`}
                   >
                     {invoice.number}
@@ -482,7 +470,7 @@ export function InvoicesManager() {
         </p>
         <div className="flex flex-wrap items-center gap-1.5">
           <button
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-3.5 py-1.5 text-sm font-semibold text-slate-700 transition-[border-color,color,transform] duration-150 ease-out hover:border-slate-400 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             type="button"
             onClick={() => goToPage(page - 1)}
             disabled={page <= 1}
@@ -500,9 +488,9 @@ export function InvoicesManager() {
               </span>
             ) : (
               <button
-                className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-slate-900/30 ${
+                className={`inline-flex min-h-10 items-center justify-center rounded-lg border px-3.5 py-1.5 text-sm font-semibold transition-[border-color,color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:scale-[0.98] ${
                   entry === page
-                    ? "border-slate-900 bg-slate-900 text-white"
+                    ? "border-primary bg-primary text-white"
                     : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900"
                 }`}
                 type="button"
@@ -516,7 +504,7 @@ export function InvoicesManager() {
             )
           )}
           <button
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-3.5 py-1.5 text-sm font-semibold text-slate-700 transition-[border-color,color,transform] duration-150 ease-out hover:border-slate-400 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             type="button"
             onClick={() => goToPage(page + 1)}
             disabled={page >= totalPages}

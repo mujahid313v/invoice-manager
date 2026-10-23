@@ -14,10 +14,11 @@ type InvoiceStatusBadgeProps = {
 export function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) {
   return (
     <span
-      className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold tracking-wide ${
         statusStyles[status] ?? statusStyles.DRAFT
       }`}
     >
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-current opacity-70" />
       {status}
     </span>
   );
