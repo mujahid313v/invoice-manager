@@ -1,9 +1,10 @@
-// Manual demo-data seed for the live demo account.
+// Manual demo-data seed for the six demo accounts.
 //
 // SAFETY: this script is invoked only by `npm run db:seed` (or
 // `npx prisma db seed`). It must never be wired into build, postinstall,
-// start or any route. It only touches rows belonging to the demo user and
-// never deletes anything outside it. It never logs secrets, hashes or the
+// start or any route. It only touches rows belonging to the six seed
+// accounts (demo/sara/rahul/emma/david/priya@example.com) and never
+// deletes anything outside them. It never logs secrets, hashes or the
 // connection string.
 //
 // Requires Node.js >= 23.6 (native TypeScript execution) or >= 22.6 with
@@ -11,34 +12,35 @@
 
 import { hash } from "bcryptjs";
 import { getPrisma } from "../src/lib/prisma.ts";
-import { buildSeedData } from "./seed-data.ts";
+import { buildSeedData, type SeedAccount } from "./seed-data.ts";
 
-const DEMO_EMAIL = "demo@example.com";
-// The public demo password. It only ever exists as a bcrypt hash at rest,
-// identical in shape to a registered account (same bcryptjs cost 12).
+// The public demo password, shared by all six seed accounts. It only ever
+// exists as a bcrypt hash at rest, identical in shape to a registered
+// account (same bcryptjs cost 12).
 const DEMO_PASSWORD = "demo1234";
 const BCRYPT_ROUNDS = 12;
 
-async function main() {
-  const prisma = getPrisma();
-  const data = buildSeedData(new Date());
+type PrismaClientLike = ReturnType<typeof getPrisma>;
 
-  const passwordHash = await hash(DEMO_PASSWORD, BCRYPT_ROUNDS);
-
+async function seedAccount(
+  prisma: PrismaClientLike,
+  account: SeedAccount,
+  passwordHash: string
+): Promise<{ extraInvoices: number; statusCounts: Record<string, number> }> {
   const user = await prisma.user.upsert({
-    where: { email: DEMO_EMAIL },
+    where: { email: account.email },
     update: { passwordHash },
-    create: { email: DEMO_EMAIL, passwordHash },
+    create: { email: account.email, passwordHash },
     select: { id: true, email: true },
   });
 
   await prisma.businessProfile.upsert({
     where: { userId: user.id },
-    update: data.profile,
-    create: { userId: user.id, ...data.profile },
+    update: account.profile,
+    create: { userId: user.id, ...account.profile },
   });
 
-  for (const client of data.clients) {
+  for (const client of account.clients) {
     // updateMany-then-create instead of a plain id upsert: a row with this
     // deterministic id that belongs to a different user must never be
     // hijacked or silently overwritten.
@@ -79,7 +81,7 @@ async function main() {
     }
   }
 
-  for (const invoice of data.invoices) {
+  for (const invoice of account.invoices) {
     await prisma.$transaction(async (tx) => {
       const row = await tx.invoice.upsert({
         where: {
@@ -134,16 +136,18 @@ async function main() {
   // app-created invoices get fresh numbers and never collide. Only ever
   // raise it, never lower it.
   await prisma.user.updateMany({
-    where: { id: user.id, nextInvoiceNumber: { lt: data.invoices.length + 1 } },
-    data: { nextInvoiceNumber: data.invoices.length + 1 },
+    where: {
+      id: user.id,
+      nextInvoiceNumber: { lt: account.invoices.length + 1 },
+    },
+    data: { nextInvoiceNumber: account.invoices.length + 1 },
   });
 
   const totalInvoices = await prisma.invoice.count({
     where: { userId: user.id },
   });
-  const extraInvoices = totalInvoices - data.invoices.length;
 
-  const statusCounts = data.invoices.reduce<Record<string, number>>(
+  const statusCounts = account.invoices.reduce<Record<string, number>>(
     (counts, invoice) => {
       counts[invoice.status] = (counts[invoice.status] ?? 0) + 1;
 
@@ -152,19 +156,40 @@ async function main() {
     {}
   );
 
-  console.log(`Seeded demo account ${DEMO_EMAIL}.`);
-  console.log(
-    `Clients: ${data.clients.length}. Invoices: ${data.invoices.length} (DRAFT ${statusCounts.DRAFT}, SENT ${statusCounts.SENT}, PAID ${statusCounts.PAID}).`
-  );
+  return {
+    extraInvoices: totalInvoices - account.invoices.length,
+    statusCounts,
+  };
+}
 
-  if (extraInvoices > 0) {
-    console.log(
-      `Left ${extraInvoices} extra invoice(s) on the demo account untouched (created outside the seed).`
+async function main() {
+  const prisma = getPrisma();
+  const data = buildSeedData(new Date());
+
+  // All six accounts share the demo password; one hash is enough.
+  const passwordHash = await hash(DEMO_PASSWORD, BCRYPT_ROUNDS);
+
+  for (const account of data.accounts) {
+    const { extraInvoices, statusCounts } = await seedAccount(
+      prisma,
+      account,
+      passwordHash
     );
+
+    console.log(`Seeded demo account ${account.email}.`);
+    console.log(
+      `Clients: ${account.clients.length}. Invoices: ${account.invoices.length} (DRAFT ${statusCounts.DRAFT ?? 0}, SENT ${statusCounts.SENT ?? 0}, PAID ${statusCounts.PAID ?? 0}).`
+    );
+
+    if (extraInvoices > 0) {
+      console.log(
+        `Left ${extraInvoices} extra invoice(s) on ${account.email} untouched (created outside the seed).`
+      );
+    }
   }
 
   console.log(
-    "Note: seeding resets the demo password to the seed value; login rate limiting is unchanged."
+    "Note: seeding resets the demo passwords to the seed value; login rate limiting is unchanged."
   );
 }
 

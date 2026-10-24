@@ -6,12 +6,17 @@ A small SaaS web app where freelancers and small businesses register, manage the
 
 **Live demo: `<ADD URL AFTER DEPLOY>`** (deployed on Vercel with a Neon database)
 
-**Demo account** (created by the seed script — `npm run db:seed`):
+**Demo accounts** (all created by the seed script — `npm run db:seed`; every
+one uses the shared password `demo1234`):
 
-| Field    | Value            |
-| -------- | ---------------- |
-| Email    | demo@example.com |
-| Password | demo1234         |
+| Email              | Business                     | Currency | Invoices |
+| ------------------ | ---------------------------- | -------- | -------- |
+| demo@example.com   | Brightline Studio            | USD      | 14       |
+| sara@example.com   | Sara Khan Web Development    | USD      | 12       |
+| rahul@example.com  | Rahul Digital Agency         | INR      | 15       |
+| emma@example.com   | Emma Weber Photography       | EUR      | 10       |
+| david@example.com  | David Miller Consulting      | GBP      | 18       |
+| priya@example.com  | Priya Design Studio          | INR      | 20       |
 
 ## Screenshots
 
@@ -254,7 +259,7 @@ cp .env.example .env
 # 4. Run migrations (local development)
 npx prisma migrate dev
 
-# 5. Seed the demo account (demo@example.com / demo1234)
+# 5. Seed the six demo accounts (password demo1234 for all of them)
 npm run db:seed
 
 # 6. Start the dev server
@@ -298,7 +303,7 @@ runs the same script.
 | `npm run lint`            | ESLint                                        |
 | `npm run typecheck`       | `tsc --noEmit`                                |
 | `npm test`                | Unit tests only — no database, no network     |
-| `npm run db:seed`         | Seed/refresh the demo account (needs DB)      |
+| `npm run db:seed`         | Seed/refresh the demo accounts (needs DB)   |
 | `npm run db:migrate`      | `prisma migrate dev` (local)                  |
 | `npm run db:migrate:deploy` | `prisma migrate deploy` (production)        |
 | `npm run vercel-build`    | Vercel build command: generate + migrate + build |
@@ -334,7 +339,9 @@ $env:RUN_DASHBOARD_TESTS="1"; node --env-file=.env --test tests/dashboard-api.te
    ```powershell
    $env:DATABASE_URL="<neon-url>"; npm run db:seed
    ```
-6. Log in at the deployed URL with `demo@example.com` / `demo1234`, confirm
+6. Log in at the deployed URL with `demo@example.com` / `demo1234` (the
+   seed also creates five more demo accounts, all with password
+   `demo1234`), confirm
    the dashboard shows data, and put the URL in the README **Live Demo**
    section (replace `<ADD URL AFTER DEPLOY>`).
 

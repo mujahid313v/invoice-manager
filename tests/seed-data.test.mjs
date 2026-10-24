@@ -26,6 +26,71 @@ const NOW_CASES = [
   new Date("2026-12-31T23:59:59Z"),
 ];
 
+// The per-user table the seed promises: clients, invoices, currency and
+// status mix (SENT is split by the overdue cutoff like the dashboard is).
+const EXPECTED = {
+  "demo@example.com": {
+    prefix: "demo",
+    clients: 7,
+    invoices: 14,
+    currency: "USD",
+    paid: 7,
+    overdue: 3,
+    outstanding: 2,
+    draft: 2,
+  },
+  "sara@example.com": {
+    prefix: "sara",
+    clients: 5,
+    invoices: 12,
+    currency: "USD",
+    paid: 6,
+    overdue: 2,
+    outstanding: 2,
+    draft: 2,
+  },
+  "rahul@example.com": {
+    prefix: "rahul",
+    clients: 6,
+    invoices: 15,
+    currency: "INR",
+    paid: 8,
+    overdue: 2,
+    outstanding: 3,
+    draft: 2,
+  },
+  "emma@example.com": {
+    prefix: "emma",
+    clients: 5,
+    invoices: 10,
+    currency: "EUR",
+    paid: 6,
+    overdue: 1,
+    outstanding: 2,
+    draft: 1,
+  },
+  "david@example.com": {
+    prefix: "david",
+    clients: 7,
+    invoices: 18,
+    currency: "GBP",
+    paid: 9,
+    overdue: 3,
+    outstanding: 4,
+    draft: 2,
+  },
+  "priya@example.com": {
+    prefix: "priya",
+    clients: 8,
+    invoices: 20,
+    currency: "INR",
+    paid: 10,
+    overdue: 3,
+    outstanding: 5,
+    draft: 2,
+  },
+};
+
 function serialize(invoices) {
   return invoices.map((invoice) => ({
     ...invoice,
@@ -35,43 +100,46 @@ function serialize(invoices) {
   }));
 }
 
-function assertInvariants(data, now) {
+function serializeAccounts(data) {
+  return data.accounts.map((account) => ({
+    email: account.email,
+    profile: account.profile,
+    clients: account.clients,
+    invoices: serialize(account.invoices),
+  }));
+}
+
+function assertAccountInvariants(account, now, expected) {
   const cutoff = invoiceOverdueCutoff(now);
   const windowKeys = buildMonthWindow(now, 6);
 
-  // Shape and uniqueness.
-  assert.ok(
-    data.clients.length >= 5 && data.clients.length <= 8,
-    "between 5 and 8 clients"
-  );
+  // Profile.
+  assert.equal(account.profile.currency, expected.currency);
+
+  // Clients: shape and uniqueness.
+  assert.equal(account.clients.length, expected.clients, "expected client count");
   assert.equal(
-    new Set(data.clients.map((client) => client.id)).size,
-    data.clients.length,
+    new Set(account.clients.map((client) => client.id)).size,
+    account.clients.length,
     "unique client ids"
   );
 
-  for (const client of data.clients) {
-    assert.match(client.id, /^demo-client-\d+$/);
+  for (const client of account.clients) {
+    assert.match(client.id, new RegExp(`^${expected.prefix}-client-\\d{2}$`));
     assert.match(client.email, /\.example\.(com|org)$/);
   }
 
-  assert.ok(
-    data.invoices.length >= 10 && data.invoices.length <= 15,
-    "between 10 and 15 invoices"
-  );
+  const invoices = account.invoices;
 
-  const numbers = data.invoices.map((invoice) => invoice.number);
+  assert.equal(invoices.length, expected.invoices, "expected invoice count");
+
+  const numbers = invoices.map((invoice) => invoice.number);
 
   assert.equal(new Set(numbers).size, numbers.length, "unique numbers");
   assert.match(numbers[0], /^INV-\d{4}$/);
 
-  const statuses = new Set(data.invoices.map((invoice) => invoice.status));
-
-  assert.ok(statuses.has("PAID"));
-  assert.ok(statuses.has("SENT"));
-  assert.ok(statuses.has("DRAFT"));
-
-  const sent = data.invoices.filter((invoice) => invoice.status === "SENT");
+  // Exact status mix.
+  const sent = invoices.filter((invoice) => invoice.status === "SENT");
   const overdue = sent.filter(
     (invoice) => invoice.dueDate.getTime() < cutoff.getTime()
   );
@@ -79,14 +147,30 @@ function assertInvariants(data, now) {
     (invoice) => invoice.dueDate.getTime() >= cutoff.getTime()
   );
 
-  assert.ok(overdue.length >= 2, "at least two overdue SENT invoices");
-  assert.ok(outstanding.length >= 2, "at least two future-due SENT invoices");
-  assert.ok(
-    data.invoices.filter((invoice) => invoice.status === "DRAFT").length >= 2,
-    "at least two DRAFT invoices"
+  assert.equal(
+    invoices.filter((invoice) => invoice.status === "PAID").length,
+    expected.paid,
+    `${account.email} PAID count`
+  );
+  assert.equal(overdue.length, expected.overdue, `${account.email} overdue count`);
+  assert.equal(
+    outstanding.length,
+    expected.outstanding,
+    `${account.email} outstanding count`
+  );
+  assert.equal(
+    invoices.filter((invoice) => invoice.status === "DRAFT").length,
+    expected.draft,
+    `${account.email} DRAFT count`
   );
 
-  for (const invoice of data.invoices) {
+  for (const invoice of invoices) {
+    // The client reference exists in this account.
+    assert.ok(
+      account.clients.some((client) => client.id === invoice.clientKey),
+      `${invoice.number} references a seeded client`
+    );
+
     // Line items and the totals equation.
     assert.ok(invoice.items.length >= 1, `${invoice.number} has items`);
 
@@ -95,8 +179,7 @@ function assertInvariants(data, now) {
     for (const item of invoice.items) {
       assert.ok(Number.isInteger(item.quantity) && item.quantity >= 1);
       assert.ok(
-        Number.isSafeInteger(item.unitPriceCents) &&
-          item.unitPriceCents >= 0
+        Number.isSafeInteger(item.unitPriceCents) && item.unitPriceCents >= 0
       );
       subtotal += item.quantity * item.unitPriceCents;
     }
@@ -160,30 +243,38 @@ function assertInvariants(data, now) {
   }
 
   // Every month of the chart window gets at least one paid invoice.
-  const buckets = bucketPaidRevenue(paidRevenueRows(data), windowKeys);
+  const buckets = bucketPaidRevenue(paidRevenueRows(account), windowKeys);
 
   assert.equal(buckets.length, 6);
 
   for (const bucket of buckets) {
     assert.ok(
       bucket.amountCents > 0,
-      `chart month ${bucket.month} is not empty`
+      `${account.email} chart month ${bucket.month} is not empty`
     );
   }
-
-  const distinctMonths = buckets.filter((bucket) => bucket.amountCents > 0)
-    .length;
-
-  assert.ok(distinctMonths >= 5, "at least five distinct paid months");
 }
 
-test("seed data satisfies every invariant for the base month", () => {
-  assertInvariants(buildSeedData(BASE_NOW), BASE_NOW);
+function assertAllAccounts(data, now) {
+  assert.equal(data.accounts.length, 6, "six accounts");
+  assert.deepEqual(
+    data.accounts.map((account) => account.email),
+    Object.keys(EXPECTED),
+    "account emails match the table"
+  );
+
+  for (const account of data.accounts) {
+    assertAccountInvariants(account, now, EXPECTED[account.email]);
+  }
+}
+
+test("every seeded account satisfies its invariants for the base month", () => {
+  assertAllAccounts(buildSeedData(BASE_NOW), BASE_NOW);
 });
 
-test("seed data satisfies every invariant at month and year edges", () => {
+test("every seeded account satisfies its invariants at month and year edges", () => {
   for (const now of NOW_CASES) {
-    assertInvariants(buildSeedData(now), now);
+    assertAllAccounts(buildSeedData(now), now);
   }
 });
 
@@ -191,29 +282,52 @@ test("buildSeedData is deterministic for a fixed now", () => {
   const first = buildSeedData(BASE_NOW);
   const second = buildSeedData(BASE_NOW);
 
-  assert.deepEqual(serialize(first.invoices), serialize(second.invoices));
-  assert.deepEqual(first.clients, second.clients);
-  assert.deepEqual(first.profile, second.profile);
+  assert.deepEqual(serializeAccounts(first), serializeAccounts(second));
 
   // The pure builder returns fresh copies, not shared mutable rows.
-  first.invoices[0].items[0].quantity = 999;
+  first.accounts[0].invoices[0].items[0].quantity = 999;
+  first.accounts[1].clients[0].name = "Mutated";
 
-  assert.notEqual(buildSeedData(BASE_NOW).invoices[0].items[0].quantity, 999);
+  assert.notEqual(
+    buildSeedData(BASE_NOW).accounts[0].invoices[0].items[0].quantity,
+    999
+  );
+  assert.notEqual(buildSeedData(BASE_NOW).accounts[1].clients[0].name, "Mutated");
 });
 
-test("seeded paid rows produce a non-empty six-bar chart", () => {
+test("each account's paid rows produce a non-empty six-bar chart", () => {
   const data = buildSeedData(BASE_NOW);
-  const buckets = bucketPaidRevenue(
-    paidRevenueRows(data),
-    buildMonthWindow(BASE_NOW, 6)
+  const windowKeys = buildMonthWindow(BASE_NOW, 6);
+
+  for (const account of data.accounts) {
+    const buckets = bucketPaidRevenue(
+      paidRevenueRows(account),
+      windowKeys
+    );
+
+    assert.equal(
+      buckets.reduce((sum, bucket) => sum + bucket.amountCents, 0),
+      account.invoices
+        .filter((invoice) => invoice.status === "PAID")
+        .reduce((sum, invoice) => sum + invoice.totalCents, 0),
+      `${account.email}: the chart sums to the paid revenue in the window`
+    );
+    assert.ok(buckets.every((bucket) => bucket.amountCents > 0));
+  }
+});
+
+test("the demo@example.com account keeps its hand-written 14 invoices", () => {
+  const demo = buildSeedData(BASE_NOW).accounts.find(
+    (account) => account.email === "demo@example.com"
   );
 
-  assert.equal(
-    buckets.reduce((sum, bucket) => sum + bucket.amountCents, 0),
-    data.invoices
-      .filter((invoice) => invoice.status === "PAID")
-      .reduce((sum, invoice) => sum + invoice.totalCents, 0),
-    "the chart sums to the paid revenue in the window"
+  assert.deepEqual(
+    demo.invoices.map((invoice) => invoice.number),
+    Array.from({ length: 14 }, (_, index) =>
+      `INV-${String(index + 1).padStart(4, "0")}`
+    )
   );
-  assert.ok(buckets.every((bucket) => bucket.amountCents > 0));
+  assert.equal(demo.invoices[0].items[0].description, "Brand identity design");
+  assert.equal(demo.invoices[1].discountCents, 10000);
+  assert.equal(demo.profile.businessName, "Brightline Studio");
 });
