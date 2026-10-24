@@ -4,7 +4,7 @@ A small SaaS web app where freelancers and small businesses register, manage the
 
 ## Live Demo
 
-**Live demo: `<ADD URL AFTER DEPLOY>`** (deployed on Vercel with a Neon database)
+**Live demo: `https://invoice-manager-ebon-omega.vercel.app/`** (deployed on Vercel with a Neon database)
 
 **Demo accounts** (all created by the seed script — `npm run db:seed`; every
 one uses the shared password `demo1234`):
